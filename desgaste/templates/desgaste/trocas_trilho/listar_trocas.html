@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Trocas de Trilho{% endblock %}
+
+{% block page_actions %}
+<div class="page-actions">
+    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
+    <a href="{% url 'nova_troca_trilho' %}" class="btn btn-primary">Novo cadastro</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Trocas de Trilho</h1>
+        <p class="page-subtitle">Consulta e acompanhamento das trocas cadastradas no sistema.</p>
+    </div>
+    <div>
+        <a href="{% url 'nova_troca_trilho' %}" class="btn btn-primary">Nova troca</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Filtros</div>
+    <div class="card-body">
+        <form method="get">
+            <div class="grid-4">
+                <div class="field">
+                    <label>Via</label>
+                    <select name="via">
+                        <option value="">Todas</option>
+                        <option value="1" {% if filtro_via == '1' %}selected{% endif %}>Via 01</option>
+                        <option value="2" {% if filtro_via == '2' %}selected{% endif %}>Via 02</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>Trilho</label>
+                    <select name="trilho">
+                        <option value="">Todos</option>
+                        <option value="A" {% if filtro_trilho == 'A' %}selected{% endif %}>A</option>
+                        <option value="B" {% if filtro_trilho == 'B' %}selected{% endif %}>B</option>
+                        <option value="C" {% if filtro_trilho == 'C' %}selected{% endif %}>C</option>
+                        <option value="D" {% if filtro_trilho == 'D' %}selected{% endif %}>D</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>Data inicial</label>
+                    <input type="date" name="data_ini" value="{{ filtro_data_ini }}">
+                </div>
+
+                <div class="field">
+                    <label>Data final</label>
+                    <input type="date" name="data_fim" value="{{ filtro_data_fim }}">
+                </div>
+            </div>
+
+            <div class="page-actions" style="margin-top: 16px; margin-bottom: 0;">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if trocas %}
+<div class="card">
+    <div class="card-header">Lista de trocas</div>
+    <div class="card-body">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Hora</th>
+                        <th>Via</th>
+                        <th>Trilho</th>
+                        <th>MT Inicial</th>
+                        <th>MT Final</th>
+                        <th>Tamanho (m)</th>
+                        <th>Tipo Solda</th>
+                        <th>Responsável</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for troca in trocas %}
+                    <tr>
+                        <td>{{ troca.data_troca|date:"d/m/Y" }}</td>
+                        <td>{{ troca.hora_troca|time:"H:i" }}</td>
+                        <td>{{ troca.get_via_display }}</td>
+                        <td>{{ troca.get_trilho_display }}</td>
+                        <td>{{ troca.mt_inicial }}</td>
+                        <td>{{ troca.mt_final }}</td>
+                        <td>{{ troca.tamanho_trilho_m }}</td>
+                        <td>{{ troca.get_tipo_solda_display }}</td>
+                        <td>{{ troca.responsavel }}</td>
+                        <td>
+                            <a href="{% url 'editar_troca_trilho' troca.id %}" class="btn btn-warning">Editar</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    Nenhuma troca de trilho cadastrada.
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Inspeção de Desgaste{% endblock %}
+
+{% block page_actions %}
+<div class="page-actions">
+    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
+    <a href="{% url 'historico_inspecoes' %}" class="btn btn-primary">Histórico de cadastros</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Registrar Inspeção de Desgaste</h1>
+        <p class="page-subtitle">Cadastro das inspeções e medições de desgaste dos trilhos.</p>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="{% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="card">
+        <div class="card-header">Localização</div>
+        <div class="card-body">
+            <div class="field">
+                <label for="id_ponto_operacional">{{ form.ponto_operacional.label }}</label>
+                <select name="ponto_operacional" id="id_ponto_operacional" data-current-value="{{ form.ponto_operacional.value|default_if_none:'' }}">
+                    <option value="">Selecione o ponto operacional</option>
+                    {% for ponto in all_pontos %}
+                        <option
+                            value="{{ ponto.id }}"
+                            data-codigo="{{ ponto.codigo }}"
+                            data-descricao="{{ ponto.descricao }}"
+                            data-tipo="{{ ponto.get_tipo_ponto_display }}"
+                            data-posicao="{{ ponto.get_posicao_display }}"
+                            data-estacao="{% if ponto.estacao %}{{ ponto.estacao.nome }} ({{ ponto.estacao.sigla }}){% else %}Não vinculada{% endif %}"
+                            data-acesso="{% if ponto.possui_acesso_patio %}Sim{% else %}Não{% endif %}"
+                            {% if form.ponto_operacional.value|stringformat:"s" == ponto.id|stringformat:"s" %}selected{% endif %}
+                        >
+                            {{ ponto.codigo }} - {{ ponto.descricao }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if form.ponto_operacional.errors %}
+                    <div class="alert-danger">{{ form.ponto_operacional.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+
+            <div class="grid-4">
+                <div class="card">
+                    <div class="card-header">Estação vinculada</div>
+                    <div class="card-body"><span id="info-estacao">Selecione um ponto</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">Tipo do ponto</div>
+                    <div class="card-body"><span id="info-tipo">Selecione um ponto</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">Posição</div>
+                    <div class="card-body"><span id="info-posicao">Selecione um ponto</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">Acesso a pátio</div>
+                    <div class="card-body"><span id="info-acesso">Selecione um ponto</span></div>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top: 16px;">
+                <div class="field">
+                    <label for="{{ form.via.id_for_label }}">{{ form.via.label }}</label>
+                    {{ form.via }}
+                    {% if form.via.errors %}
+                        <div class="alert-danger">{{ form.via.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="id_trilho">Trilho</label>
+                    <select name="trilho" id="id_trilho" data-current-value="{{ form.trilho.value|default_if_none:'' }}">
+                        <option value="">Selecione o trilho</option>
+                        {% for trilho in all_trilhos %}
+                            <option
+                                value="{{ trilho.id }}"
+                                data-ponto="{{ trilho.ponto_operacional_id }}"
+                                data-via="{{ trilho.via }}"
+                                {% if form.trilho.value|stringformat:"s" == trilho.id|stringformat:"s" %}selected{% endif %}
+                            >
+                                {{ trilho.ponto_operacional.codigo }} - Via {{ trilho.via }} - Trilho {{ trilho.lado_trilho }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.trilho.errors %}
+                        <div class="alert-danger">{{ form.trilho.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Dados da inspeção</div>
+        <div class="card-body">
+            <div class="grid-3">
+                <div class="field">
+                    <label for="{{ form.data_inspecao.id_for_label }}">{{ form.data_inspecao.label }}</label>
+                    {{ form.data_inspecao }}
+                    {% if form.data_inspecao.errors %}
+                        <div class="alert-danger">{{ form.data_inspecao.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="{{ form.hora_inspecao.id_for_label }}">{{ form.hora_inspecao.label }}</label>
+                    {{ form.hora_inspecao }}
+                    {% if form.hora_inspecao.errors %}
+                        <div class="alert-danger">{{ form.hora_inspecao.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="{{ form.tipo_inspecao.id_for_label }}">{{ form.tipo_inspecao.label }}</label>
+                    {{ form.tipo_inspecao }}
+                    {% if form.tipo_inspecao.errors %}
+                        <div class="alert-danger">{{ form.tipo_inspecao.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="{{ form.inspetor.id_for_label }}">{{ form.inspetor.label }}</label>
+                {{ form.inspetor }}
+                {% if form.inspetor.errors %}
+                    <div class="alert-danger">{{ form.inspetor.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+
+            <div class="field">
+                <label for="{{ form.observacoes.id_for_label }}">{{ form.observacoes.label }}</label>
+                {{ form.observacoes }}
+                {% if form.observacoes.errors %}
+                    <div class="alert-danger">{{ form.observacoes.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Medição de desgaste</div>
+        <div class="card-body">
+            <div class="grid-3">
+                <div class="field">
+                    <label for="{{ form.desgaste_vertical_mm.id_for_label }}">{{ form.desgaste_vertical_mm.label }}</label>
+                    {{ form.desgaste_vertical_mm }}
+                    {% if form.desgaste_vertical_mm.errors %}
+                        <div class="alert-danger">{{ form.desgaste_vertical_mm.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="{{ form.desgaste_lateral_mm.id_for_label }}">{{ form.desgaste_lateral_mm.label }}</label>
+                    {{ form.desgaste_lateral_mm }}
+                    {% if form.desgaste_lateral_mm.errors %}
+                        <div class="alert-danger">{{ form.desgaste_lateral_mm.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="{{ form.status_desgaste.id_for_label }}">{{ form.status_desgaste.label }}</label>
+                    {{ form.status_desgaste }}
+                    {% if form.status_desgaste.errors %}
+                        <div class="alert-danger">{{ form.status_desgaste.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="{{ form.observacao_tecnica.id_for_label }}">{{ form.observacao_tecnica.label }}</label>
+                {{ form.observacao_tecnica }}
+                {% if form.observacao_tecnica.errors %}
+                    <div class="alert-danger">{{ form.observacao_tecnica.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="page-actions">
+        <button type="submit" class="btn btn-success">Salvar registro</button>
+        <button type="button" class="btn btn-secondary" id="btn-limpar">Limpar campos</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const pontoSelect = document.getElementById('id_ponto_operacional');
+    const viaSelect = document.getElementById('id_via');
+    const trilhoSelect = document.getElementById('id_trilho');
+
+    const infoEstacao = document.getElementById('info-estacao');
+    const infoTipo = document.getElementById('info-tipo');
+    const infoPosicao = document.getElementById('info-posicao');
+    const infoAcesso = document.getElementById('info-acesso');
+
+    const opcoesOriginais = Array.from(trilhoSelect.querySelectorAll('option')).map(option => option.cloneNode(true));
+
+    function atualizarInfoPonto() {
+        const option = pontoSelect.options[pontoSelect.selectedIndex];
+
+        if (!option || !option.value) {
+            infoEstacao.textContent = 'Selecione um ponto';
+            infoTipo.textContent = 'Selecione um ponto';
+            infoPosicao.textContent = 'Selecione um ponto';
+            infoAcesso.textContent = 'Selecione um ponto';
+            return;
+        }
+
+        infoEstacao.textContent = option.getAttribute('data-estacao') || '-';
+        infoTipo.textContent = option.getAttribute('data-tipo') || '-';
+        infoPosicao.textContent = option.getAttribute('data-posicao') || '-';
+        infoAcesso.textContent = option.getAttribute('data-acesso') || '-';
+    }
+
+    function filtrarTrilhos() {
+        const pontoSelecionado = pontoSelect.value;
+        const viaSelecionada = viaSelect.value;
+        const valorAtual = trilhoSelect.getAttribute('data-current-value') || '';
+
+        trilhoSelect.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Selecione o trilho';
+        trilhoSelect.appendChild(placeholder);
+
+        opcoesOriginais.forEach(option => {
+            if (!option.value) return;
+
+            const pontoOption = option.getAttribute('data-ponto');
+            const viaOption = option.getAttribute('data-via');
+
+            if (pontoOption === pontoSelecionado && viaOption === viaSelecionada) {
+                const novaOpcao = option.cloneNode(true);
+
+                if (option.value === valorAtual) {
+                    novaOpcao.selected = true;
+                }
+
+                trilhoSelect.appendChild(novaOpcao);
+            }
+        });
+
+        if (trilhoSelect.options.length === 1) {
+            placeholder.textContent = 'Nenhum trilho disponível para a seleção';
+        }
+    }
+
+    pontoSelect.addEventListener('change', function () {
+        trilhoSelect.setAttribute('data-current-value', '');
+        atualizarInfoPonto();
+        filtrarTrilhos();
+    });
+
+    viaSelect.addEventListener('change', function () {
+        trilhoSelect.setAttribute('data-current-value', '');
+        filtrarTrilhos();
+    });
+
+    atualizarInfoPonto();
+    filtrarTrilhos();
+
+    const btnLimpar = document.getElementById('btn-limpar');
+    const dataInspecao = document.getElementById('id_data_inspecao');
+    const horaInspecao = document.getElementById('id_hora_inspecao');
+    const inspetor = document.getElementById('id_inspetor');
+    const tipoInspecao = document.getElementById('id_tipo_inspecao');
+    const observacoes = document.getElementById('id_observacoes');
+    const desgasteVertical = document.getElementById('id_desgaste_vertical_mm');
+    const desgasteLateral = document.getElementById('id_desgaste_lateral_mm');
+    const observacaoTecnica = document.getElementById('id_observacao_tecnica');
+    const statusDesgaste = document.getElementById('id_status_desgaste');
+
+    function preencherDataHoraAtual() {
+        const agora = new Date();
+        const ano = agora.getFullYear();
+        const mes = String(agora.getMonth() + 1).padStart(2, '0');
+        const dia = String(agora.getDate()).padStart(2, '0');
+        const horas = String(agora.getHours()).padStart(2, '0');
+        const minutos = String(agora.getMinutes()).padStart(2, '0');
+
+        dataInspecao.value = `${ano}-${mes}-${dia}`;
+        horaInspecao.value = `${horas}:${minutos}`;
+    }
+
+    btnLimpar.addEventListener('click', function () {
+        pontoSelect.value = '';
+        viaSelect.value = '';
+        trilhoSelect.setAttribute('data-current-value', '');
+        trilhoSelect.innerHTML = '<option value="">Selecione o trilho</option>';
+
+        inspetor.value = '';
+        tipoInspecao.selectedIndex = 0;
+        observacoes.value = '';
+        desgasteVertical.value = '';
+        desgasteLateral.value = '';
+        observacaoTecnica.value = '';
+        statusDesgaste.selectedIndex = 0;
+
+        preencherDataHoraAtual();
+        atualizarInfoPonto();
+        filtrarTrilhos();
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block page_actions %}
+<div class="page-actions">
+    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
+    <a href="{% url 'listar_inspecoes' %}" class="btn btn-primary">Histórico de cadastros</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ titulo }}</h1>
+        <p class="page-subtitle">Cadastro de inspeções de trecho e ocorrências encontradas em campo.</p>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="card">
+        <div class="card-header">Dados da Inspeção</div>
+        <div class="card-body">
+            <div class="grid-3">
+                <div class="field">
+                    {{ form.setor.label_tag }}
+                    {{ form.setor }}
+                </div>
+                <div class="field">
+                    {{ form.data_inspecao.label_tag }}
+                    {{ form.data_inspecao }}
+                </div>
+                <div class="field">
+                    {{ form.hora_inspecao.label_tag }}
+                    {{ form.hora_inspecao }}
+                </div>
+            </div>
+
+            <div class="grid-4">
+                <div class="field">
+                    {{ form.via.label_tag }}
+                    {{ form.via }}
+                </div>
+                <div class="field">
+                    {{ form.trilho.label_tag }}
+                    {{ form.trilho }}
+                </div>
+                <div class="field">
+                    {{ form.estacao_referencia.label_tag }}
+                    {{ form.estacao_referencia }}
+                </div>
+                <div class="field">
+                    {{ form.referencia_local.label_tag }}
+                    {{ form.referencia_local }}
+                </div>
+            </div>
+
+            <div class="grid-4">
+                <div class="field">
+                    {{ form.pk_inicial.label_tag }}
+                    {{ form.pk_inicial }}
+                </div>
+                <div class="field">
+                    {{ form.pk_final.label_tag }}
+                    {{ form.pk_final }}
+                </div>
+                <div class="field">
+                    {{ form.mt_inicial.label_tag }}
+                    {{ form.mt_inicial }}
+                </div>
+                <div class="field">
+                    {{ form.mt_final.label_tag }}
+                    {{ form.mt_final }}
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="field">
+                    {{ form.responsavel.label_tag }}
+                    {{ form.responsavel }}
+                </div>
+                <div class="field"></div>
+            </div>
+
+            <div class="field">
+                {{ form.observacoes_gerais.label_tag }}
+                {{ form.observacoes_gerais }}
+            </div>
+
+            {% for field in form %}
+                {% if field.errors %}
+                    <div class="alert-danger">
+                        <strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Ocorrências</div>
+        <div class="card-body">
+            <div class="page-actions" style="margin-bottom: 20px;">
+                <button type="button" class="btn btn-primary" onclick="adicionarFormulario()">Adicionar ocorrência</button>
+            </div>
+
+            {{ formset.management_form }}
+
+            <div id="formset-container">
+                {% for form_ocorrencia in formset %}
+                    <div class="card" style="margin-bottom: 16px;">
+                        <div class="card-body">
+                            {% for hidden in form_ocorrencia.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+
+                            <div class="grid-4">
+                                <div class="field">
+                                    {{ form_ocorrencia.item.label_tag }}
+                                    {{ form_ocorrencia.item }}
+                                </div>
+
+                                <div class="field">
+                                    {{ form_ocorrencia.criticidade.label_tag }}
+                                    {{ form_ocorrencia.criticidade }}
+                                </div>
+
+                                <div class="field">
+                                    {{ form_ocorrencia.foto.label_tag }}
+                                    {{ form_ocorrencia.foto }}
+                                </div>
+
+                                <div class="field">
+                                    {% if form_ocorrencia.instance.pk %}
+                                        {{ form_ocorrencia.DELETE.label_tag }}
+                                        {{ form_ocorrencia.DELETE }}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                {{ form_ocorrencia.observacao.label_tag }}
+                                {{ form_ocorrencia.observacao }}
+                            </div>
+
+                            {% for field in form_ocorrencia %}
+                                {% if field.errors %}
+                                    <div class="alert-danger">
+                                        <strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="page-actions">
+        <button type="submit" class="btn btn-success">Salvar inspeção</button>
+        <a href="{% url 'listar_inspecoes' %}" class="btn btn-secondary">Voltar</a>
+    </div>
+</form>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function adicionarFormulario() {
+    const totalForms = document.getElementById("id_ocorrenciainspecao_set-TOTAL_FORMS");
+    const container = document.getElementById("formset-container");
+    const formCount = parseInt(totalForms.value);
+
+    const emptyForm = `
+        <div class="card" style="margin-bottom: 16px;">
+            <div class="card-body">
+                <div class="grid-4">
+                    <div class="field">
+                        <label for="id_ocorrenciainspecao_set-${formCount}-item">Item</label>
+                        <select name="ocorrenciainspecao_set-${formCount}-item" id="id_ocorrenciainspecao_set-${formCount}-item">
+                            {% for item in formset.empty_form.fields.item.queryset %}
+                                <option value="{{ item.id }}">{{ item.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="id_ocorrenciainspecao_set-${formCount}-criticidade">Criticidade</label>
+                        <select name="ocorrenciainspecao_set-${formCount}-criticidade" id="id_ocorrenciainspecao_set-${formCount}-criticidade">
+                            <option value="baixa">Baixa</option>
+                            <option value="media" selected>Média</option>
+                            <option value="alta">Alta</option>
+                            <option value="critica">Crítica</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="id_ocorrenciainspecao_set-${formCount}-foto">Foto</label>
+                        <input type="file" name="ocorrenciainspecao_set-${formCount}-foto" id="id_ocorrenciainspecao_set-${formCount}-foto">
+                    </div>
+
+                    <div class="field"></div>
+                </div>
+
+                <div class="field">
+                    <label for="id_ocorrenciainspecao_set-${formCount}-observacao">Observação</label>
+                    <textarea name="ocorrenciainspecao_set-${formCount}-observacao" rows="2" id="id_ocorrenciainspecao_set-${formCount}-observacao"></textarea>
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.insertAdjacentHTML("beforeend", emptyForm);
+    totalForms.value = formCount + 1;
+}
+</script>
+{% endblock %}

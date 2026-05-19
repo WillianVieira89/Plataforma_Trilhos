@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Inspeções{% endblock %}
+
+{% block page_actions %}
+<div class="page-actions">
+    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
+    <a href="{% url 'nova_inspecao' %}" class="btn btn-primary">Novo cadastro</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Inspeções</h1>
+        <p class="page-subtitle">Consulta e acompanhamento das inspeções cadastradas no sistema.</p>
+    </div>
+    <div>
+        <a href="{% url 'nova_inspecao' %}" class="btn btn-primary">Nova inspeção</a>
+    </div>
+</div>
+
+{% if inspecoes %}
+<div class="card">
+    <div class="card-header">Lista de inspeções</div>
+    <div class="card-body">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Hora</th>
+                        <th>Setor</th>
+                        <th>Via</th>
+                        <th>Trilho</th>
+                        <th>Responsável</th>
+                        <th>Ocorrências</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inspecao in inspecoes %}
+                    <tr>
+                        <td>{{ inspecao.data_inspecao|date:"d/m/Y" }}</td>
+                        <td>{{ inspecao.hora_inspecao|time:"H:i" }}</td>
+                        <td>{{ inspecao.setor.nome }}</td>
+                        <td>{{ inspecao.get_via_display }}</td>
+                        <td>{{ inspecao.get_trilho_display }}</td>
+                        <td>{{ inspecao.responsavel }}</td>
+                        <td>{{ inspecao.ocorrencias.count }}</td>
+                        <td>
+                            <a href="{% url 'editar_inspecao' inspecao.id %}" class="btn btn-warning">Editar</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    Nenhuma inspeção cadastrada.
+</div>
+{% endif %}
+{% endblock %}

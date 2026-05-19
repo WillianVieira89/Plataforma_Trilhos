@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}Mapa de Trocas de Trilho{% endblock %}
+
+{% block page_actions %}
+<div class="page-actions">
+    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
+    <a href="{% url 'nova_troca_trilho' %}" class="btn btn-primary">Nova troca</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Mapa de Trocas de Trilho</h1>
+        <p class="page-subtitle">Trecho completo segmentado de 2 em 2 metros, com marcação das estações.</p>
+    </div>
+</div>
+
+{% if tem_dados %}
+<div class="card">
+    <div class="card-header">Visualização do trecho</div>
+    <div class="card-body">
+
+        <div class="legenda-mapa">
+            <div class="legenda-item">
+                <span class="legenda-cor legenda-preto"></span>
+                <span>Sem troca</span>
+            </div>
+            <div class="legenda-item">
+                <span class="legenda-cor legenda-lilas"></span>
+                <span>Trecho trocado</span>
+            </div>
+            <div class="legenda-item">
+                <span class="legenda-linha"></span>
+                <span>Estação</span>
+            </div>
+        </div>
+
+        <div class="mapa-estacoes" id="mapa-estacoes"></div>
+
+        <div class="mapa-bloco">
+            <div class="mapa-label">Via 1</div>
+            <div class="mapa-faixa" id="faixa-via-1"></div>
+        </div>
+
+        <div class="mapa-bloco">
+            <div class="mapa-label">Via 2</div>
+            <div class="mapa-faixa" id="faixa-via-2"></div>
+        </div>
+
+        <div class="mapa-escala">
+            <span>MT {{ mt_min }}</span>
+            <span>Segmentação de {{ passo_mt }} em {{ passo_mt }} m</span>
+            <span>MT {{ mt_max }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Detalhes da troca</div>
+    <div class="card-body">
+        <div id="painel-detalhes" class="empty-state">
+            Clique em um trecho lilás para visualizar os dados da troca.
+        </div>
+    </div>
+</div>
+
+{{ via_1_json|json_script:"via1-data" }}
+{{ via_2_json|json_script:"via2-data" }}
+{{ estacoes_json|json_script:"estacoes-data" }}
+
+<style>
+    .legenda-mapa {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin-bottom: 22px;
+    }
+
+    .legenda-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: var(--muted);
+    }
+
+    .legenda-cor {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        border: 1px solid #cfcfe0;
+        display: inline-block;
+    }
+
+    .legenda-preto {
+        background: #111111;
+    }
+
+    .legenda-lilas {
+        background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    }
+
+    .legenda-linha {
+        width: 2px;
+        height: 18px;
+        background: #ffffff;
+        display: inline-block;
+    }
+
+    .mapa-estacoes {
+        position: relative;
+        width: 100%;
+        min-height: 80px;
+        margin-bottom: 20px;
+        border-bottom: 1px dashed #cfcfe0;
+    }
+
+    .estacao-marcador {
+        position: absolute;
+        transform: translateX(-50%);
+        bottom: 0;
+        text-align: center;
+        min-width: 60px;
+    }
+
+    .estacao-linha {
+        width: 2px;
+        height: 20px;
+        background: #5b5b66;
+        margin: 0 auto 6px;
+    }
+
+    .estacao-sigla {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--primary);
+        white-space: nowrap;
+    }
+
+    .estacao-nome {
+        font-size: 11px;
+        color: var(--muted);
+        white-space: nowrap;
+    }
+
+    .mapa-bloco {
+        margin-bottom: 28px;
+    }
+
+    .mapa-label {
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: var(--primary);
+    }
+
+    .mapa-faixa {
+        position: relative;
+        width: 100%;
+        height: 42px;
+        border-radius: 999px;
+        border: 1px solid #2f2f38;
+        overflow: hidden;
+        background-color: #111111;
+        background-image: repeating-linear-gradient(
+            to right,
+            #111111 0,
+            #111111 calc((100% / {{ total_segmentos }}) - 1px),
+            #2d2d36 calc((100% / {{ total_segmentos }}) - 1px),
+            #2d2d36 calc(100% / {{ total_segmentos }})
+        );
+    }
+
+    .mapa-segmento {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        border: none;
+        cursor: pointer;
+        background: linear-gradient(135deg, var(--primary), var(--primary-light));
+        border-radius: 999px;
+        transition: transform 0.15s ease, filter 0.15s ease;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10);
+    }
+
+    .mapa-segmento:hover {
+        filter: brightness(1.05);
+        transform: scaleY(1.05);
+    }
+
+    .mapa-escala {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 8px;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .detalhe-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+    }
+
+    .detalhe-item {
+        background: #faf8ff;
+        border: 1px solid #ece2fb;
+        border-radius: 12px;
+        padding: 12px;
+    }
+
+    .detalhe-item strong {
+        display: block;
+        color: var(--primary);
+        margin-bottom: 4px;
+    }
+
+    .detalhe-imagem {
+        margin-top: 18px;
+    }
+
+    .detalhe-imagem img {
+        max-width: 100%;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+</style>
+
+{% else %}
+<div class="empty-state">
+    Nenhuma troca com MT válido foi encontrada para montar o mapa.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    const via1 = JSON.parse(document.getElementById('via1-data')?.textContent || '[]');
+    const via2 = JSON.parse(document.getElementById('via2-data')?.textContent || '[]');
+    const estacoes = JSON.parse(document.getElementById('estacoes-data')?.textContent || '[]');
+
+    function montarFaixa(elementId, dados) {
+        const faixa = document.getElementById(elementId);
+        if (!faixa) return;
+
+        dados.forEach(item => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'mapa-segmento';
+            btn.style.left = `${item.left}%`;
+            btn.style.width = `${item.width}%`;
+            btn.title = `${item.mt_inicial} até ${item.mt_final}`;
+            btn.addEventListener('click', () => mostrarDetalhes(item));
+            faixa.appendChild(btn);
+        });
+    }
+
+    function montarEstacoes() {
+        const container = document.getElementById('mapa-estacoes');
+        if (!container) return;
+
+        estacoes.forEach(estacao => {
+            const marcador = document.createElement('div');
+            marcador.className = 'estacao-marcador';
+            marcador.style.left = `${estacao.left}%`;
+
+            marcador.innerHTML = `
+                <div class="estacao-sigla">${estacao.sigla}</div>
+                <div class="estacao-nome">${estacao.nome}</div>
+                <div class="estacao-linha"></div>
+            `;
+
+            container.appendChild(marcador);
+        });
+    }
+
+    function valorOuTraco(valor) {
+        return (valor === null || valor === undefined || valor === '') ? '-' : valor;
+    }
+
+    function mostrarDetalhes(item) {
+        const painel = document.getElementById('painel-detalhes');
+
+        painel.innerHTML = `
+            <div class="detalhe-grid">
+                <div class="detalhe-item"><strong>Data</strong>${valorOuTraco(item.data_troca)}</div>
+                <div class="detalhe-item"><strong>Hora início</strong>${valorOuTraco(item.hora_inicio_troca)}</div>
+                <div class="detalhe-item"><strong>Hora fim</strong>${valorOuTraco(item.hora_fim_troca)}</div>
+                <div class="detalhe-item"><strong>Via</strong>${valorOuTraco(item.via)}</div>
+                <div class="detalhe-item"><strong>Trilho</strong>${valorOuTraco(item.trilho)}</div>
+                <div class="detalhe-item"><strong>MT inicial</strong>${valorOuTraco(item.mt_inicial)}</div>
+                <div class="detalhe-item"><strong>MT final</strong>${valorOuTraco(item.mt_final)}</div>
+                <div class="detalhe-item"><strong>Segmentos de 2 m</strong>${valorOuTraco(item.quantidade_segmentos)}</div>
+                <div class="detalhe-item"><strong>Tamanho do trilho (m)</strong>${valorOuTraco(item.tamanho_trilho_m)}</div>
+                <div class="detalhe-item"><strong>Medida da folga (mm)</strong>${valorOuTraco(item.medida_folga_mm)}</div>
+                <div class="detalhe-item"><strong>Solda de fechamento</strong>${valorOuTraco(item.solda_fechamento)}</div>
+                <div class="detalhe-item"><strong>Trilho de transição</strong>${valorOuTraco(item.trilho_transicao)}</div>
+                <div class="detalhe-item"><strong>Temp. antes da solda</strong>${valorOuTraco(item.temperatura_antes_solda_c)}</div>
+                <div class="detalhe-item"><strong>Temp. depois da solda</strong>${valorOuTraco(item.temperatura_depois_solda_c)}</div>
+                <div class="detalhe-item"><strong>Tempo de aquecimento</strong>${valorOuTraco(item.tempo_aquecimento_seg)}</div>
+                <div class="detalhe-item"><strong>Tempo de vazão</strong>${valorOuTraco(item.tempo_vazao_seg)}</div>
+                <div class="detalhe-item"><strong>Perfil do trilho</strong>${valorOuTraco(item.perfil_trilho)}</div>
+                <div class="detalhe-item"><strong>Classe do trilho</strong>${valorOuTraco(item.classe_trilho)}</div>
+                <div class="detalhe-item"><strong>Tipo de solda</strong>${valorOuTraco(item.tipo_solda)}</div>
+                <div class="detalhe-item"><strong>Motivo</strong>${valorOuTraco(item.motivo_troca)}</div>
+                <div class="detalhe-item"><strong>OS</strong>${valorOuTraco(item.os_numero)}</div>
+                <div class="detalhe-item"><strong>Responsável</strong>${valorOuTraco(item.responsavel)}</div>
+                <div class="detalhe-item"><strong>Observações</strong>${valorOuTraco(item.observacoes)}</div>
+            </div>
+            ${item.imagem_url ? `
+                <div class="detalhe-imagem">
+                    <strong>Imagem</strong><br>
+                    <img src="${item.imagem_url}" alt="Imagem da troca">
+                </div>
+            ` : ''}
+        `;
+    }
+
+    montarEstacoes();
+    montarFaixa('faixa-via-1', via1);
+    montarFaixa('faixa-via-2', via2);
+</script>
+{% endblock %}

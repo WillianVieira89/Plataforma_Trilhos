@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Inspeções{% endblock %}
+
+{% block page_actions %}
+<div class="page-actions">
+    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
+    <a href="{% url 'registrar_inspecao' %}" class="btn btn-primary">Novo cadastro</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Histórico de Inspeções</h1>
+        <p class="page-subtitle">Consulta dos registros de desgaste cadastrados no sistema.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Filtros</div>
+    <div class="card-body">
+        <form method="get">
+            <div class="grid-3">
+                <div class="field">
+                    <label for="id_ponto_operacional">Ponto operacional</label>
+                    <select name="ponto_operacional" id="id_ponto_operacional">
+                        <option value="">Todos</option>
+                        {% for ponto in pontos %}
+                            <option value="{{ ponto.id }}" {% if filtro_ponto == ponto.id|stringformat:"s" %}selected{% endif %}>
+                                {{ ponto.codigo }} - {{ ponto.descricao }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="id_via">Via</label>
+                    <select name="via" id="id_via">
+                        <option value="">Todas</option>
+                        <option value="1" {% if filtro_via == '1' %}selected{% endif %}>Via 01</option>
+                        <option value="2" {% if filtro_via == '2' %}selected{% endif %}>Via 02</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="id_trilho">Trilho</label>
+                    <select name="trilho" id="id_trilho">
+                        <option value="">Todos</option>
+                        {% for trilho in trilhos %}
+                            <option value="{{ trilho.id }}" {% if filtro_trilho == trilho.id|stringformat:"s" %}selected{% endif %}>
+                                {{ trilho.ponto_operacional.codigo }} - Via {{ trilho.via }} - Trilho {{ trilho.lado_trilho }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="page-actions" style="margin-top: 16px; margin-bottom: 0;">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if registros %}
+<div class="card">
+    <div class="card-header">Registros encontrados</div>
+    <div class="card-body">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Hora</th>
+                        <th>Ponto</th>
+                        <th>Via</th>
+                        <th>Trilho</th>
+                        <th>Inspetor</th>
+                        <th>Tipo</th>
+                        <th>Desg. Vertical</th>
+                        <th>Desg. Lateral</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for registro in registros %}
+                        <tr>
+                            <td>{{ registro.inspecao.data_inspecao|date:"d/m/Y" }}</td>
+                            <td>{{ registro.inspecao.hora_inspecao|time:"H:i" }}</td>
+                            <td>{{ registro.inspecao.trilho.ponto_operacional.codigo }}</td>
+                            <td>Via {{ registro.inspecao.trilho.via }}</td>
+                            <td>{{ registro.inspecao.trilho.lado_trilho }}</td>
+                            <td>{{ registro.inspecao.inspetor }}</td>
+                            <td>{{ registro.inspecao.get_tipo_inspecao_display }}</td>
+                            <td>
+                                {% if registro.medicao and registro.medicao.desgaste_vertical_mm != None %}
+                                    {{ registro.medicao.desgaste_vertical_mm }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if registro.medicao and registro.medicao.desgaste_lateral_mm != None %}
+                                    {{ registro.medicao.desgaste_lateral_mm }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if registro.medicao %}
+                                    {{ registro.medicao.get_status_desgaste_display }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    Nenhum registro encontrado com os filtros informados.
+</div>
+{% endif %}
+{% endblock %}
