@@ -15,28 +15,61 @@ from .models import (
 )
 
 # ajuste estes valores para o trecho real depois
-MT_TRECHO_INICIAL = 0
+MT_TRECHO_INICIAL = 1
 MT_TRECHO_FINAL = 10099
 PASSO_MT = 2
 
 ESTACOES_MAPA = [
-    {"sigla": "CPR", "nome": "Capão Redondo", "mt": None},
-    {"sigla": "CPL", "nome": "Campo Limpo", "mt": None},
-    {"sigla": "VBE", "nome": "Vila das Belezas", "mt": None},
-    {"sigla": "GGR", "nome": "Giovanni Gronchi", "mt": None},
-    {"sigla": "STA", "nome": "Santo Amaro", "mt": None},
-    {"sigla": "LTR", "nome": "Largo Treze", "mt": None},
-    {"sigla": "APN", "nome": "Adolfo Pinheiro", "mt": None},
-    {"sigla": "ABV", "nome": "Alto da Boa Vista", "mt": None},
-    {"sigla": "BGA", "nome": "Borba Gato", "mt": None},
-    {"sigla": "BRK", "nome": "Brooklin", "mt": None},
-    {"sigla": "CPB", "nome": "Campo Belo", "mt": None},
-    {"sigla": "ECT", "nome": "Eucaliptos", "mt": None},
-    {"sigla": "MOE", "nome": "Moema", "mt": None},
-    {"sigla": "SER", "nome": "AACD Servidor", "mt": None},
-    {"sigla": "HSP", "nome": "Hospital São Paulo", "mt": None},
-    {"sigla": "SCZ", "nome": "Santa Cruz", "mt": None},
-    {"sigla": "CKB", "nome": "Chácara Klabin", "mt": None},
+    {"sigla": "CPR", "nome": "Capão Redondo", "via": "1", "mt_inicial": 295, "mt_final": 363},
+    {"sigla": "CPR", "nome": "Capão Redondo", "via": "2", "mt_inicial": 270, "mt_final": 338},
+
+    {"sigla": "CPL", "nome": "Campo Limpo", "via": "1", "mt_inicial": 1295, "mt_final": 1363},
+    {"sigla": "CPL", "nome": "Campo Limpo", "via": "2", "mt_inicial": 1270, "mt_final": 1338},
+
+    {"sigla": "VBE", "nome": "Vila das Belezas", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "VBE", "nome": "Vila das Belezas", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "GGR", "nome": "Giovanni Gronchi", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "GGR", "nome": "Giovanni Gronchi", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "STA", "nome": "Santo Amaro", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "STA", "nome": "Santo Amaro", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "LTR", "nome": "Largo Treze", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "LTR", "nome": "Largo Treze", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "APN", "nome": "Adolfo Pinheiro", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "APN", "nome": "Adolfo Pinheiro", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "ABV", "nome": "Alto da Boa Vista", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "ABV", "nome": "Alto da Boa Vista", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "BGA", "nome": "Borba Gato", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "BGA", "nome": "Borba Gato", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "BRK", "nome": "Brooklin", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "BRK", "nome": "Brooklin", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "CPB", "nome": "Campo Belo", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "CPB", "nome": "Campo Belo", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "ECT", "nome": "Eucaliptos", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "ECT", "nome": "Eucaliptos", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "MOE", "nome": "Moema", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "MOE", "nome": "Moema", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "SER", "nome": "AACD Servidor", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "SER", "nome": "AACD Servidor", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "HSP", "nome": "Hospital São Paulo", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "HSP", "nome": "Hospital São Paulo", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "SCZ", "nome": "Santa Cruz", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "SCZ", "nome": "Santa Cruz", "via": "2", "mt_inicial": None, "mt_final": None},
+
+    {"sigla": "CKB", "nome": "Chácara Klabin", "via": "1", "mt_inicial": None, "mt_final": None},
+    {"sigla": "CKB", "nome": "Chácara Klabin", "via": "2", "mt_inicial": None, "mt_final": None},
 ]
 
 def registrar_inspecao(request):
@@ -443,7 +476,7 @@ def mapa_trocas_trilho(request):
     mt_min = MT_TRECHO_INICIAL
     mt_max = MT_TRECHO_FINAL
 
-    total_segmentos = (mt_max - mt_min) // PASSO_MT
+    total_segmentos = ((mt_max - mt_min) // PASSO_MT) + 1
     if total_segmentos <= 0:
         total_segmentos = 1
 
@@ -478,31 +511,53 @@ def mapa_trocas_trilho(request):
             via_1.append(bloco)
         elif item['via'] == '2':
             via_2.append(bloco)
-            
-    estacoes_render = []
+
+    estacoes_via_1 = []
+    estacoes_via_2 = []
 
     for estacao in ESTACOES_MAPA:
-        mt_estacao = estacao.get("mt")
+        mt_inicial = estacao.get("mt_inicial")
+        mt_final = estacao.get("mt_final")
+        via = estacao.get("via")
 
-        if mt_estacao is None:
+        if mt_inicial is None or mt_final is None:
             continue
 
-        if mt_estacao < mt_min or mt_estacao > mt_max:
+        if mt_final < mt_inicial:
+            mt_inicial, mt_final = mt_final, mt_inicial
+
+        if mt_final < mt_min or mt_inicial > mt_max:
             continue
 
-        left = ((mt_estacao - mt_min) / (mt_max - mt_min)) * 100 if mt_max > mt_min else 0
+        mt_inicial_aj = max(mt_inicial, mt_min)
+        mt_final_aj = min(mt_final, mt_max)
 
-        estacoes_render.append({
+        left = ((mt_inicial_aj - mt_min) / (mt_max - mt_min)) * 100 if mt_max > mt_min else 0
+        width = ((mt_final_aj - mt_inicial_aj) / (mt_max - mt_min)) * 100 if mt_max > mt_min else 0
+        mt_centro = (mt_inicial_aj + mt_final_aj) / 2
+        left_centro = ((mt_centro - mt_min) / (mt_max - mt_min)) * 100 if mt_max > mt_min else 0
+
+        item_estacao = {
             "sigla": estacao["sigla"],
             "nome": estacao["nome"],
-            "mt": mt_estacao,
+            "via": via,
+            "mt_inicial": mt_inicial,
+            "mt_final": mt_final,
             "left": round(left, 6),
-        })
+            "width": round(max(width, 1.2), 6),
+            "left_centro": round(left_centro, 6),
+        }
+
+        if via == "1":
+            estacoes_via_1.append(item_estacao)
+        elif via == "2":
+            estacoes_via_2.append(item_estacao)
 
     context = {
-        'via_1_json': json.dumps(via_1, cls=DjangoJSONEncoder),
-        'via_2_json': json.dumps(via_2, cls=DjangoJSONEncoder),
-        'estacoes_json': json.dumps(estacoes_render, cls=DjangoJSONEncoder),
+        'via_1_json': via_1,
+        'via_2_json': via_2,
+        'estacoes_via_1_json': estacoes_via_1,
+        'estacoes_via_2_json': estacoes_via_2,
         'mt_min': mt_min,
         'mt_max': mt_max,
         'passo_mt': PASSO_MT,

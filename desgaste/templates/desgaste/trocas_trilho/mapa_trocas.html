@@ -13,7 +13,9 @@
 <div class="page-header">
     <div>
         <h1 class="page-title">Mapa de Trocas de Trilho</h1>
-        <p class="page-subtitle">Trecho completo segmentado de 2 em 2 metros, com marcação das estações.</p>
+        <p class="page-subtitle">
+            Trecho completo segmentado de 2 em 2 metros, com estações por via e trechos trocados destacados em lilás.
+        </p>
     </div>
 </div>
 
@@ -32,24 +34,60 @@
                 <span>Trecho trocado</span>
             </div>
             <div class="legenda-item">
-                <span class="legenda-linha"></span>
-                <span>Estação</span>
+                <span class="legenda-cor legenda-estacao"></span>
+                <span>Faixa da estação</span>
             </div>
         </div>
 
-        <div class="mapa-estacoes" id="mapa-estacoes"></div>
+        <div class="zoom-barra">
+            <div class="zoom-grupo">
+                <label for="zoom-mt-inicial">MT inicial visível</label>
+                <input type="number" id="zoom-mt-inicial" min="{{ mt_min }}" max="{{ mt_max }}" step="{{ passo_mt }}" value="{{ mt_min }}">
+            </div>
+
+            <div class="zoom-grupo">
+                <label for="zoom-mt-final">MT final visível</label>
+                <input type="number" id="zoom-mt-final" min="{{ mt_min }}" max="{{ mt_max }}" step="{{ passo_mt }}" value="{{ mt_max }}">
+            </div>
+
+            <div class="zoom-acoes">
+                <button type="button" class="btn btn-primary" id="btn-aplicar-zoom">Aplicar zoom</button>
+                <button type="button" class="btn btn-secondary" id="btn-reset-zoom">Trecho completo</button>
+                <button type="button" class="btn btn-secondary" id="btn-zoom-trocas">Zoom nas trocas</button>
+            </div>
+        </div>
+
+        <div class="zoom-info" id="zoom-info">
+            Exibindo MT {{ mt_min }} até MT {{ mt_max }}
+        </div>
 
         <div class="mapa-bloco">
-            <div class="mapa-label">Via 1</div>
+            <div class="mapa-cabecalho-via">
+                <div>
+                    <h3 class="mapa-via-titulo">Via 1</h3>
+                    <p class="mapa-via-subtitulo">Trilhos A e B</p>
+                </div>
+                <span class="mapa-via-badge">Via operacional</span>
+            </div>
+
+            <div class="mapa-estacoes" id="mapa-estacoes-via-1"></div>
             <div class="mapa-faixa" id="faixa-via-1"></div>
         </div>
 
         <div class="mapa-bloco">
-            <div class="mapa-label">Via 2</div>
+            <div class="mapa-cabecalho-via">
+                <div>
+                    <h3 class="mapa-via-titulo">Via 2</h3>
+                    <p class="mapa-via-subtitulo">Trilhos C e D</p>
+                </div>
+                <span class="mapa-via-badge">Via operacional</span>
+            </div>
+
+            <div class="mapa-estacoes" id="mapa-estacoes-via-2"></div>
             <div class="mapa-faixa" id="faixa-via-2"></div>
         </div>
 
-        <div class="mapa-escala">
+        <div class="mapa-escala" id="mapa-escala">
             <span>MT {{ mt_min }}</span>
             <span>Segmentação de {{ passo_mt }} em {{ passo_mt }} m</span>
             <span>MT {{ mt_max }}</span>
@@ -68,7 +106,8 @@
 
 {{ via_1_json|json_script:"via1-data" }}
 {{ via_2_json|json_script:"via2-data" }}
-{{ estacoes_json|json_script:"estacoes-data" }}
+{{ estacoes_via_1_json|json_script:"estacoes-via-1-data" }}
+{{ estacoes_via_2_json|json_script:"estacoes-via-2-data" }}
 
 <style>
     .legenda-mapa {
@@ -102,19 +141,101 @@
         background: linear-gradient(135deg, var(--primary), var(--primary-light));
     }
 
-    .legenda-linha {
-        width: 2px;
-        height: 18px;
+    .legenda-estacao {
+        background: rgba(155, 77, 240, 0.20);
+        border: 1px solid rgba(155, 77, 240, 0.45);
+    }
+
+    .zoom-barra {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+        align-items: end;
+        margin-bottom: 16px;
+    }
+
+    .zoom-grupo label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 700;
+        color: var(--text);
+    }
+
+    .zoom-acoes {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .zoom-info {
+        margin-bottom: 20px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .mapa-bloco {
+        margin-bottom: 36px;
+        padding: 18px;
         background: #ffffff;
-        display: inline-block;
+        border: 1px solid #e8ddfb;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .mapa-cabecalho-via {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .mapa-via-titulo {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--primary);
+        line-height: 1.2;
+    }
+
+    .mapa-via-subtitulo {
+        margin: 4px 0 0;
+        font-size: 13px;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .mapa-via-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 12px;
+        background: rgba(155, 77, 240, 0.10);
+        color: var(--primary);
+        border: 1px solid rgba(155, 77, 240, 0.20);
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
     }
 
     .mapa-estacoes {
         position: relative;
         width: 100%;
-        min-height: 80px;
-        margin-bottom: 20px;
+        min-height: 82px;
+        margin-bottom: 10px;
         border-bottom: 1px dashed #cfcfe0;
+        overflow: visible;
+    }
+
+    .estacao-faixa {
+        position: absolute;
+        bottom: 0;
+        height: 16px;
+        background: rgba(155, 77, 240, 0.18);
+        border: 1px solid rgba(155, 77, 240, 0.45);
+        border-radius: 999px;
     }
 
     .estacao-marcador {
@@ -123,11 +244,12 @@
         bottom: 0;
         text-align: center;
         min-width: 60px;
+        z-index: 2;
     }
 
     .estacao-linha {
         width: 2px;
-        height: 20px;
+        height: 18px;
         background: #5b5b66;
         margin: 0 auto 6px;
     }
@@ -137,22 +259,21 @@
         font-weight: 700;
         color: var(--primary);
         white-space: nowrap;
+        background: #ffffff;
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 8px;
+        border: 1px solid #e6d8fb;
     }
 
     .estacao-nome {
         font-size: 11px;
         color: var(--muted);
         white-space: nowrap;
-    }
-
-    .mapa-bloco {
-        margin-bottom: 28px;
-    }
-
-    .mapa-label {
-        font-weight: 700;
-        margin-bottom: 10px;
-        color: var(--primary);
+        background: #ffffff;
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 8px;
     }
 
     .mapa-faixa {
@@ -163,13 +284,7 @@
         border: 1px solid #2f2f38;
         overflow: hidden;
         background-color: #111111;
-        background-image: repeating-linear-gradient(
-            to right,
-            #111111 0,
-            #111111 calc((100% / {{ total_segmentos }}) - 1px),
-            #2d2d36 calc((100% / {{ total_segmentos }}) - 1px),
-            #2d2d36 calc(100% / {{ total_segmentos }})
-        );
+        background-repeat: repeat-x;
     }
 
     .mapa-segmento {
@@ -228,6 +343,21 @@
         border-radius: 12px;
         border: 1px solid var(--border);
     }
+
+    @media (max-width: 768px) {
+        .mapa-cabecalho-via {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .mapa-via-titulo {
+            font-size: 18px;
+        }
+
+        .mapa-via-subtitulo {
+            font-size: 12px;
+        }
+    }
 </style>
 
 {% else %}
@@ -239,47 +369,196 @@
 
 {% block page_scripts %}
 <script>
+document.addEventListener('DOMContentLoaded', function () {
     const via1 = JSON.parse(document.getElementById('via1-data')?.textContent || '[]');
     const via2 = JSON.parse(document.getElementById('via2-data')?.textContent || '[]');
-    const estacoes = JSON.parse(document.getElementById('estacoes-data')?.textContent || '[]');
+    const estacoesVia1 = JSON.parse(document.getElementById('estacoes-via-1-data')?.textContent || '[]');
+    const estacoesVia2 = JSON.parse(document.getElementById('estacoes-via-2-data')?.textContent || '[]');
 
-    function montarFaixa(elementId, dados) {
+    const TRECHO_MIN = {{ mt_min }};
+    const TRECHO_MAX = {{ mt_max }};
+    const PASSO_MT = {{ passo_mt }};
+
+    function valorOuTraco(valor) {
+        return (valor === null || valor === undefined || valor === '') ? '-' : valor;
+    }
+
+    function normalizarJanela(inicio, fim) {
+        let novoInicio = Number(inicio);
+        let novoFim = Number(fim);
+
+        if (Number.isNaN(novoInicio)) novoInicio = TRECHO_MIN;
+        if (Number.isNaN(novoFim)) novoFim = TRECHO_MAX;
+
+        novoInicio = Math.max(TRECHO_MIN, novoInicio);
+        novoFim = Math.min(TRECHO_MAX, novoFim);
+
+        if (novoFim <= novoInicio) {
+            novoFim = Math.min(TRECHO_MAX, novoInicio + PASSO_MT * 20);
+        }
+
+        if (novoFim <= novoInicio) {
+            novoInicio = TRECHO_MIN;
+            novoFim = TRECHO_MAX;
+        }
+
+        return { inicio: novoInicio, fim: novoFim };
+    }
+
+    function calcularPosicaoRelativa(mt, inicio, fim) {
+        if (fim <= inicio) return 0;
+        return ((mt - inicio) / (fim - inicio)) * 100;
+    }
+
+    function atualizarGradeFaixa(elementId, inicio, fim) {
         const faixa = document.getElementById(elementId);
         if (!faixa) return;
 
+        const totalMetros = fim - inicio;
+        const totalSegmentos = Math.max(1, Math.floor(totalMetros / PASSO_MT));
+        const larguraSegmento = 100 / totalSegmentos;
+
+        if (totalSegmentos > 400) {
+            faixa.style.backgroundImage = 'none';
+            return;
+        }
+
+        faixa.style.backgroundImage = `
+            repeating-linear-gradient(
+                to right,
+                #111111 0,
+                #111111 calc(${larguraSegmento}% - 1px),
+                #2d2d36 calc(${larguraSegmento}% - 1px),
+                #2d2d36 ${larguraSegmento}%
+            )
+        `;
+    }
+
+    function renderFaixa(elementId, dados, inicio, fim) {
+        const faixa = document.getElementById(elementId);
+        if (!faixa) return;
+
+        faixa.innerHTML = '';
+
         dados.forEach(item => {
+            const mtIni = Number(item.mt_ini_num ?? item.mt_inicial);
+            const mtFim = Number(item.mt_fim_num ?? item.mt_final);
+
+            if (Number.isNaN(mtIni) || Number.isNaN(mtFim)) return;
+            if (mtFim < inicio || mtIni > fim) return;
+
+            const iniVisivel = Math.max(mtIni, inicio);
+            const fimVisivel = Math.min(mtFim, fim);
+
+            let left = calcularPosicaoRelativa(iniVisivel, inicio, fim);
+            let width = calcularPosicaoRelativa(fimVisivel, inicio, fim) - left;
+
+            width = Math.max(width, 0.25);
+
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'mapa-segmento';
-            btn.style.left = `${item.left}%`;
-            btn.style.width = `${item.width}%`;
+            btn.style.left = `${left}%`;
+            btn.style.width = `${width}%`;
             btn.title = `${item.mt_inicial} até ${item.mt_final}`;
             btn.addEventListener('click', () => mostrarDetalhes(item));
             faixa.appendChild(btn);
         });
     }
 
-    function montarEstacoes() {
-        const container = document.getElementById('mapa-estacoes');
+    function renderEstacoes(elementId, estacoes, inicio, fim) {
+        const container = document.getElementById(elementId);
         if (!container) return;
 
+        container.innerHTML = '';
+
         estacoes.forEach(estacao => {
+            const mtIni = Number(estacao.mt_inicial);
+            const mtFim = Number(estacao.mt_final);
+
+            if (Number.isNaN(mtIni) || Number.isNaN(mtFim)) return;
+            if (mtFim < inicio || mtIni > fim) return;
+
+            const iniVisivel = Math.max(mtIni, inicio);
+            const fimVisivel = Math.min(mtFim, fim);
+
+            let left = calcularPosicaoRelativa(iniVisivel, inicio, fim);
+            let width = calcularPosicaoRelativa(fimVisivel, inicio, fim) - left;
+            width = Math.max(width, 1.2);
+
+            const centro = (iniVisivel + fimVisivel) / 2;
+            const leftCentro = calcularPosicaoRelativa(centro, inicio, fim);
+
+            const faixa = document.createElement('div');
+            faixa.className = 'estacao-faixa';
+            faixa.style.left = `${left}%`;
+            faixa.style.width = `${width}%`;
+            faixa.title = `${estacao.nome} | Via ${estacao.via} | MT ${estacao.mt_inicial} até ${estacao.mt_final}`;
+            container.appendChild(faixa);
+
             const marcador = document.createElement('div');
             marcador.className = 'estacao-marcador';
-            marcador.style.left = `${estacao.left}%`;
-
+            marcador.style.left = `${leftCentro}%`;
             marcador.innerHTML = `
                 <div class="estacao-sigla">${estacao.sigla}</div>
                 <div class="estacao-nome">${estacao.nome}</div>
                 <div class="estacao-linha"></div>
             `;
-
             container.appendChild(marcador);
         });
     }
 
-    function valorOuTraco(valor) {
-        return (valor === null || valor === undefined || valor === '') ? '-' : valor;
+    function atualizarEscala(inicio, fim) {
+        const escala = document.getElementById('mapa-escala');
+        const info = document.getElementById('zoom-info');
+
+        if (escala) {
+            escala.innerHTML = `
+                <span>MT ${inicio}</span>
+                <span>Segmentação de ${PASSO_MT} em ${PASSO_MT} m</span>
+                <span>MT ${fim}</span>
+            `;
+        }
+
+        if (info) {
+            info.textContent = `Exibindo MT ${inicio} até MT ${fim}`;
+        }
+
+        const inputIni = document.getElementById('zoom-mt-inicial');
+        const inputFim = document.getElementById('zoom-mt-final');
+
+        if (inputIni) inputIni.value = inicio;
+        if (inputFim) inputFim.value = fim;
+    }
+
+    function aplicarZoom(inicio, fim) {
+        const janela = normalizarJanela(inicio, fim);
+
+        atualizarGradeFaixa('faixa-via-1', janela.inicio, janela.fim);
+        atualizarGradeFaixa('faixa-via-2', janela.inicio, janela.fim);
+
+        renderEstacoes('mapa-estacoes-via-1', estacoesVia1, janela.inicio, janela.fim);
+        renderEstacoes('mapa-estacoes-via-2', estacoesVia2, janela.inicio, janela.fim);
+        renderFaixa('faixa-via-1', via1, janela.inicio, janela.fim);
+        renderFaixa('faixa-via-2', via2, janela.inicio, janela.fim);
+        atualizarEscala(janela.inicio, janela.fim);
+    }
+
+    function zoomNasTrocas() {
+        const todos = [...via1, ...via2];
+        if (!todos.length) {
+            aplicarZoom(TRECHO_MIN, TRECHO_MAX);
+            return;
+        }
+
+        const menor = Math.min(...todos.map(item => Number(item.mt_ini_num ?? item.mt_inicial)));
+        const maior = Math.max(...todos.map(item => Number(item.mt_fim_num ?? item.mt_final)));
+
+        const margem = 100;
+        aplicarZoom(
+            Math.max(TRECHO_MIN, menor - margem),
+            Math.min(TRECHO_MAX, maior + margem)
+        );
     }
 
     function mostrarDetalhes(item) {
@@ -320,8 +599,21 @@
         `;
     }
 
-    montarEstacoes();
-    montarFaixa('faixa-via-1', via1);
-    montarFaixa('faixa-via-2', via2);
+    document.getElementById('btn-aplicar-zoom')?.addEventListener('click', function () {
+        const inicio = document.getElementById('zoom-mt-inicial')?.value;
+        const fim = document.getElementById('zoom-mt-final')?.value;
+        aplicarZoom(inicio, fim);
+    });
+
+    document.getElementById('btn-reset-zoom')?.addEventListener('click', function () {
+        aplicarZoom(TRECHO_MIN, TRECHO_MAX);
+    });
+
+    document.getElementById('btn-zoom-trocas')?.addEventListener('click', function () {
+        zoomNasTrocas();
+    });
+
+    aplicarZoom(TRECHO_MIN, TRECHO_MAX);
+});
 </script>
 {% endblock %}
