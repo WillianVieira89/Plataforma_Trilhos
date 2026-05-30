@@ -2,174 +2,494 @@
 
 {% block title %}{{ titulo }}{% endblock %}
 
-{% block page_actions %}
-<div class="page-actions">
-    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
-    <a href="{% url 'mapa_trocas_trilho' %}" class="btn btn-primary">Histórico de cadastros</a>
-</div>
-{% endblock %}
-
 {% block content %}
-<div class="page-header">
-    <div>
+<div class="page-header page-header-com-acoes">
+    <div class="page-header-texto">
         <h1 class="page-title">{{ titulo }}</h1>
-        <p class="page-subtitle">Cadastro de troca de trilho com localização, condições de fechamento, parâmetros da solda e dados técnicos.</p>
+    </div>
+
+    <div class="page-actions-inline">
+        <a href="{% url 'tela_inicial' %}" class="btn btn-light-action">Início</a>
+        <a href="{% url 'mapa_trocas_trilho' %}" class="btn btn-primary">Mapa de Trocas</a>
     </div>
 </div>
 
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
+    {% if form.non_field_errors %}
+        <div class="alert-danger form-alert">
+            {{ form.non_field_errors }}
+        </div>
+    {% endif %}
+
     <div class="card">
         <div class="card-header">Localização</div>
         <div class="card-body">
-            <div class="grid-4">
-                <div class="field">
-                    {{ form.data_troca.label_tag }}
-                    {{ form.data_troca }}
-                </div>
-                <div class="field">
-                    {{ form.hora_troca.label_tag }}
-                    {{ form.hora_troca }}
-                </div>
-                <div class="field">
-                    {{ form.via.label_tag }}
-                    {{ form.via }}
-                </div>
-                <div class="field">
-                    {{ form.trilho.label_tag }}
-                    {{ form.trilho }}
+
+            <div class="form-section">
+                <div class="form-section-title">Data e identificação</div>
+
+                <div class="grid-4">
+                    <div class="field">
+                        {{ form.data_troca.label_tag }}
+                        {{ form.data_troca }}
+                        {{ form.data_troca.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.via.label_tag }}
+                        {{ form.via }}
+                        {{ form.via.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.trilho.label_tag }}
+                        {{ form.trilho }}
+                        {{ form.trilho.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.os_numero.label_tag }}
+                        {{ form.os_numero }}
+                        {{ form.os_numero.errors }}
+                    </div>
                 </div>
             </div>
 
-            <div class="grid-4">
-                <div class="field">
-                    {{ form.estacao_referencia.label_tag }}
-                    {{ form.estacao_referencia }}
-                </div>
-                <div class="field">
-                    {{ form.referencia_local.label_tag }}
-                    {{ form.referencia_local }}
-                </div>
-                <div class="field">
-                    {{ form.mt_inicial.label_tag }}
-                    {{ form.mt_inicial }}
-                </div>
-                <div class="field">
-                    {{ form.mt_final.label_tag }}
-                    {{ form.mt_final }}
+            <div class="form-section">
+                <div class="form-section-title">Horário da troca</div>
+
+                <div class="grid-2">
+                    <div class="field">
+                        {{ form.hora_inicio_troca.label_tag }}
+                        {{ form.hora_inicio_troca }}
+                        {{ form.hora_inicio_troca.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.hora_fim_troca.label_tag }}
+                        {{ form.hora_fim_troca }}
+                        {{ form.hora_fim_troca.errors }}
+                    </div>
                 </div>
             </div>
 
-            <div class="grid-2">
-                <div class="field">
-                    {{ form.tamanho_trilho_m.label_tag }}
-                    {{ form.tamanho_trilho_m }}
+            <div class="form-section">
+                <div class="form-section-title">Referência do local</div>
+
+                <div class="grid-2">
+                    <div class="field">
+                        {{ form.estacao_referencia.label_tag }}
+                        {{ form.estacao_referencia }}
+                        {{ form.estacao_referencia.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.referencia_local.label_tag }}
+                        {{ form.referencia_local }}
+                        {{ form.referencia_local.errors }}
+                    </div>
                 </div>
             </div>
+
+            <div class="form-section">
+                <div class="form-section-title">Intervalo do trecho</div>
+
+                <div class="grid-4">
+                    <div class="field">
+                        {{ form.mt_inicial.label_tag }}
+                        {{ form.mt_inicial }}
+                        {{ form.mt_inicial.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.mt_final.label_tag }}
+                        {{ form.mt_final }}
+                        {{ form.mt_final.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.tamanho_trilho_m.label_tag }}
+                        {{ form.tamanho_trilho_m }}
+                        {{ form.tamanho_trilho_m.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.medida_folga_mm.label_tag }}
+                        {{ form.medida_folga_mm }}
+                        {{ form.medida_folga_mm.errors }}
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
     <div class="card">
-        <div class="card-header">Condições do fechamento e do trilho</div>
+        <div class="card-header">Soldagem e condições da troca</div>
         <div class="card-body">
-            <div class="grid-3">
-                <div class="field">
-                    {{ form.medida_folga_mm.label_tag }}
-                    {{ form.medida_folga_mm }}
-                </div>
-                <div class="field">
-                    {{ form.solda_fechamento.label_tag }}
-                    {{ form.solda_fechamento }}
-                </div>
-                <div class="field">
-                    {{ form.trilho_transicao.label_tag }}
-                    {{ form.trilho_transicao }}
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="card">
-        <div class="card-header">Parâmetros da solda</div>
-        <div class="card-body">
-            <div class="grid-4">
-                <div class="field">
-                    {{ form.temperatura_antes_solda_c.label_tag }}
-                    {{ form.temperatura_antes_solda_c }}
-                </div>
-                <div class="field">
-                    {{ form.temperatura_depois_solda_c.label_tag }}
-                    {{ form.temperatura_depois_solda_c }}
-                </div>
-                <div class="field">
-                    {{ form.tempo_aquecimento_seg.label_tag }}
-                    {{ form.tempo_aquecimento_seg }}
-                </div>
-                <div class="field">
-                    {{ form.tempo_vazao_seg.label_tag }}
-                    {{ form.tempo_vazao_seg }}
+            <div class="form-section">
+                <div class="form-section-title">Condições da solda</div>
+
+                <div class="grid-4">
+                    <div class="field">
+                        {{ form.solda_fechamento.label_tag }}
+                        {{ form.solda_fechamento }}
+                        {{ form.solda_fechamento.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.trilho_transicao.label_tag }}
+                        {{ form.trilho_transicao }}
+                        {{ form.trilho_transicao.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.tipo_solda.label_tag }}
+                        {{ form.tipo_solda }}
+                        {{ form.tipo_solda.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.motivo_troca.label_tag }}
+                        {{ form.motivo_troca }}
+                        {{ form.motivo_troca.errors }}
+                    </div>
                 </div>
             </div>
 
-            <div class="grid-2">
-                <div class="field">
-                    {{ form.imagem.label_tag }}
-                    {{ form.imagem }}
+            <div class="form-section">
+                <div class="form-section-title">Temperatura e tempos</div>
+
+                <div class="grid-4">
+                    <div class="field">
+                        {{ form.temperatura_antes_solda_c.label_tag }}
+                        {{ form.temperatura_antes_solda_c }}
+                        {{ form.temperatura_antes_solda_c.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.temperatura_depois_solda_c.label_tag }}
+                        {{ form.temperatura_depois_solda_c }}
+                        {{ form.temperatura_depois_solda_c.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.tempo_aquecimento_seg.label_tag }}
+                        {{ form.tempo_aquecimento_seg }}
+                        {{ form.tempo_aquecimento_seg.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.tempo_vazao_seg.label_tag }}
+                        {{ form.tempo_vazao_seg }}
+                        {{ form.tempo_vazao_seg.errors }}
+                    </div>
                 </div>
             </div>
+
         </div>
     </div>
 
     <div class="card">
         <div class="card-header">Dados técnicos</div>
         <div class="card-body">
-            <div class="grid-4">
-                <div class="field">
-                    {{ form.perfil_trilho.label_tag }}
-                    {{ form.perfil_trilho }}
-                </div>
-                <div class="field">
-                    {{ form.classe_trilho.label_tag }}
-                    {{ form.classe_trilho }}
-                </div>
-                <div class="field">
-                    {{ form.tipo_solda.label_tag }}
-                    {{ form.tipo_solda }}
-                </div>
-                <div class="field">
-                    {{ form.os_numero.label_tag }}
-                    {{ form.os_numero }}
+
+            <div class="form-section">
+                <div class="form-section-title">Características do trilho</div>
+
+                <div class="grid-4">
+                    <div class="field">
+                        {{ form.perfil_trilho.label_tag }}
+                        {{ form.perfil_trilho }}
+                        {{ form.perfil_trilho.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.classe_trilho.label_tag }}
+                        {{ form.classe_trilho }}
+                        {{ form.classe_trilho.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.responsavel.label_tag }}
+                        {{ form.responsavel }}
+                        {{ form.responsavel.errors }}
+                    </div>
+
+                    <div class="field">
+                        {{ form.imagem.label_tag }}
+                        {{ form.imagem }}
+                        {{ form.imagem.errors }}
+                    </div>
                 </div>
             </div>
 
-            <div class="grid-2">
+            <div class="form-section">
+                <div class="form-section-title">Observações</div>
+
                 <div class="field">
-                    {{ form.motivo_troca.label_tag }}
-                    {{ form.motivo_troca }}
-                </div>
-                <div class="field">
-                    {{ form.responsavel.label_tag }}
-                    {{ form.responsavel }}
+                    {{ form.observacoes.label_tag }}
+                    {{ form.observacoes }}
+                    {{ form.observacoes.errors }}
                 </div>
             </div>
 
-            <div class="field">
-                {{ form.observacoes.label_tag }}
-                {{ form.observacoes }}
-            </div>
-
-            {% if form.errors %}
-                <div class="alert-danger">
-                    {{ form.errors }}
-                </div>
-            {% endif %}
         </div>
     </div>
 
-    <div class="page-actions">
-        <button type="submit" class="btn btn-success">Salvar</button>
-        <a href="{% url 'mapa_trocas_trilho' %}" class="btn btn-secondary">Voltar</a>
+    <div class="form-actions-bottom">
+        <button type="submit" class="btn btn-success">Salvar cadastro</button>
+        <a href="{% url 'mapa_trocas_trilho' %}" class="btn btn-secondary">Cancelar</a>
     </div>
 </form>
+
+<style>
+    .page-header-com-acoes {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+
+    .page-header-texto {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .page-actions-inline {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        margin-top: 6px;
+    }
+
+    .btn-light-action {
+        background: #ffffff;
+        color: #6b7280;
+        border: 1px solid #d8dbe3;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .btn-light-action:hover {
+        background: #f8f9fb;
+        color: #4b5563;
+    }
+
+    .form-alert {
+        margin-bottom: 16px;
+    }
+
+    .form-section {
+        padding: 18px;
+        border: 1px solid #ece2fb;
+        border-radius: 14px;
+        background: #ffffff;
+        margin-bottom: 18px;
+    }
+
+    .form-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-section-title {
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--primary);
+        margin-bottom: 14px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #f0e7ff;
+    }
+
+    .field label {
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+        min-height: 48px;
+    }
+
+    .field ul.errorlist {
+        margin: 6px 0 0;
+        padding-left: 18px;
+        color: #b42318;
+        font-size: 13px;
+    }
+
+    .form-actions-bottom {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        margin-top: 20px;
+    }
+
+    @media (max-width: 900px) {
+        .grid-4 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .page-header-com-acoes {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .page-actions-inline {
+            justify-content: flex-start;
+        }
+
+        .form-actions-bottom {
+            justify-content: flex-start;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .grid-4,
+        .grid-2 {
+            grid-template-columns: 1fr;
+        }
+
+        .form-section {
+            padding: 14px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const viaSelect = document.getElementById('id_via');
+    const trilhoSelect = document.getElementById('id_trilho');
+
+    const mtInicialInput = document.getElementById('id_mt_inicial');
+    const mtFinalInput = document.getElementById('id_mt_final');
+    const tamanhoTrilhoInput = document.getElementById('id_tamanho_trilho_m');
+
+    /*
+    =====================================================
+    FILTRO DE TRILHO CONFORME A VIA
+    Via 01 -> Trilho A e B
+    Via 02 -> Trilho C e D
+    =====================================================
+    */
+    if (viaSelect && trilhoSelect) {
+        const opcoesOriginais = Array.from(trilhoSelect.options).map(option => ({
+            value: option.value,
+            text: option.text,
+            selected: option.selected
+        }));
+
+        function normalizarVia(valor) {
+            return String(valor || '').replace(/\D/g, '');
+        }
+
+        function atualizarOpcoesTrilho() {
+            const via = normalizarVia(viaSelect.value);
+            const valorAtual = trilhoSelect.value;
+
+            let permitidos = [];
+
+            if (via === '1' || via === '01') {
+                permitidos = ['', 'A', 'B'];
+            } else if (via === '2' || via === '02') {
+                permitidos = ['', 'C', 'D'];
+            } else {
+                permitidos = [''];
+            }
+
+            trilhoSelect.innerHTML = '';
+
+            opcoesOriginais.forEach(opcao => {
+                if (permitidos.includes(opcao.value)) {
+                    const option = document.createElement('option');
+                    option.value = opcao.value;
+                    option.text = opcao.text;
+
+                    if (opcao.value === valorAtual) {
+                        option.selected = true;
+                    }
+
+                    trilhoSelect.appendChild(option);
+                }
+            });
+
+            const valorAindaExiste = Array.from(trilhoSelect.options).some(
+                option => option.value === valorAtual
+            );
+
+            if (!valorAindaExiste) {
+                trilhoSelect.value = '';
+            }
+        }
+
+        viaSelect.addEventListener('change', atualizarOpcoesTrilho);
+        atualizarOpcoesTrilho();
+    }
+
+    /*
+    =====================================================
+    CÁLCULO AUTOMÁTICO DO TAMANHO DO TRILHO
+    Tamanho = MT final - MT inicial
+    =====================================================
+    */
+    function extrairNumeroMT(valor) {
+        const texto = String(valor || '');
+        const numeros = texto.match(/\d+/g);
+
+        if (!numeros) {
+            return null;
+        }
+
+        return Number(numeros.join(''));
+    }
+
+    function calcularTamanhoTrilho() {
+        if (!mtInicialInput || !mtFinalInput || !tamanhoTrilhoInput) {
+            return;
+        }
+
+        const mtInicial = extrairNumeroMT(mtInicialInput.value);
+        const mtFinal = extrairNumeroMT(mtFinalInput.value);
+
+        if (mtInicial === null || mtFinal === null) {
+            tamanhoTrilhoInput.value = '';
+            return;
+        }
+
+        const tamanho = Math.abs(mtFinal - mtInicial);
+
+        if (tamanho <= 0) {
+            tamanhoTrilhoInput.value = '';
+            return;
+        }
+
+        tamanhoTrilhoInput.value = tamanho.toFixed(2);
+    }
+
+    if (mtInicialInput && mtFinalInput && tamanhoTrilhoInput) {
+        tamanhoTrilhoInput.readOnly = true;
+
+        mtInicialInput.addEventListener('input', calcularTamanhoTrilho);
+        mtFinalInput.addEventListener('input', calcularTamanhoTrilho);
+
+        mtInicialInput.addEventListener('change', calcularTamanhoTrilho);
+        mtFinalInput.addEventListener('change', calcularTamanhoTrilho);
+
+        calcularTamanhoTrilho();
+    }
+});
+</script>
 {% endblock %}

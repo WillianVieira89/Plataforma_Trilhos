@@ -10,7 +10,7 @@ class Linha(models.Model):
 
 
 class Estacao(models.Model):
-    linha = models.ForeignKey(Linha, on_delete=models.CASCADE, related_name='estacoes')
+    linha = models.ForeignKey(Linha, on_delete=models.CASCADE, related_name="estacoes")
     nome = models.CharField(max_length=100)
     sigla = models.CharField(max_length=10, unique=True)
 
@@ -20,41 +20,41 @@ class Estacao(models.Model):
 
 class PontoOperacional(models.Model):
     TIPO_PONTO_CHOICES = [
-        ('patio', 'Pátio'),
-        ('estacao', 'Estação'),
-        ('amv', 'AMV'),
-        ('aparelho_dilatador', 'Aparelho Dilatador'),
-        ('estacionamento_auxiliar', 'Estacionamento Auxiliar'),
-        ('terminal', 'Terminal'),
-        ('acesso', 'Acesso'),
-        ('outro', 'Outro'),
+        ("patio", "Pátio"),
+        ("estacao", "Estação"),
+        ("amv", "AMV"),
+        ("aparelho_dilatador", "Aparelho Dilatador"),
+        ("estacionamento_auxiliar", "Estacionamento Auxiliar"),
+        ("terminal", "Terminal"),
+        ("acesso", "Acesso"),
+        ("outro", "Outro"),
     ]
 
     POSICAO_CHOICES = [
-        ('leste', 'Leste'),
-        ('oeste', 'Oeste'),
-        ('centro', 'Centro'),
-        ('nao_aplicavel', 'Não aplicável'),
+        ("leste", "Leste"),
+        ("oeste", "Oeste"),
+        ("centro", "Centro"),
+        ("nao_aplicavel", "Não aplicável"),
     ]
 
     estacao = models.ForeignKey(
         Estacao,
         on_delete=models.CASCADE,
-        related_name='pontos_operacionais',
+        related_name="pontos_operacionais",
         null=True,
-        blank=True
+        blank=True,
     )
-    codigo = models.CharField(max_length=30)  # Ex.: PCR, X40, STA, X45P, VDC
+    codigo = models.CharField(max_length=30)
     descricao = models.CharField(max_length=150)
     tipo_ponto = models.CharField(max_length=30, choices=TIPO_PONTO_CHOICES)
     ordem = models.PositiveIntegerField()
-    posicao = models.CharField(max_length=20, choices=POSICAO_CHOICES, default='nao_aplicavel')
+    posicao = models.CharField(max_length=20, choices=POSICAO_CHOICES, default="nao_aplicavel")
     possui_acesso_patio = models.BooleanField(default=False)
     observacoes = models.TextField(blank=True, null=True)
 
     class Meta:
-        ordering = ['ordem']
-        unique_together = ('codigo', 'ordem')
+        ordering = ["ordem"]
+        unique_together = ("codigo", "ordem")
 
     def __str__(self):
         return f"{self.codigo} - {self.descricao}"
@@ -62,21 +62,21 @@ class PontoOperacional(models.Model):
 
 class Trilho(models.Model):
     VIA_CHOICES = [
-        ('1', 'Via 01'),
-        ('2', 'Via 02'),
+        ("1", "Via 01"),
+        ("2", "Via 02"),
     ]
 
     TRILHO_CHOICES = [
-        ('A', 'Trilho A'),
-        ('B', 'Trilho B'),
-        ('C', 'Trilho C'),
-        ('D', 'Trilho D'),
+        ("A", "Trilho A"),
+        ("B", "Trilho B"),
+        ("C", "Trilho C"),
+        ("D", "Trilho D"),
     ]
 
     ponto_operacional = models.ForeignKey(
         PontoOperacional,
         on_delete=models.CASCADE,
-        related_name='trilhos'
+        related_name="trilhos",
     )
     via = models.CharField(max_length=1, choices=VIA_CHOICES)
     lado_trilho = models.CharField(max_length=1, choices=TRILHO_CHOICES)
@@ -88,43 +88,49 @@ class Trilho(models.Model):
     observacoes = models.TextField(blank=True, null=True)
 
     class Meta:
-        unique_together = ('ponto_operacional', 'via', 'lado_trilho')
+        unique_together = ("ponto_operacional", "via", "lado_trilho")
 
     def _ultimo_numero(self, valor):
         if not valor:
             return None
-        numeros = ''.join(ch if ch.isdigit() else ' ' for ch in valor).split()
+
+        numeros = "".join(ch if ch.isdigit() else " " for ch in valor).split()
+
         if not numeros:
             return None
+
         return int(numeros[-1])
 
     def clean(self):
         pares_validos = {
-            '1': ['A', 'B'],
-            '2': ['C', 'D'],
+            "1": ["A", "B"],
+            "2": ["C", "D"],
         }
 
         if self.via and self.lado_trilho:
             if self.lado_trilho not in pares_validos.get(self.via, []):
                 raise ValidationError({
-                    'lado_trilho': f'Para a Via {self.via}, os trilhos permitidos são {", ".join(pares_validos[self.via])}.'
+                    "lado_trilho": (
+                        f'Para a Via {self.via}, os trilhos permitidos são '
+                        f'{", ".join(pares_validos[self.via])}.'
+                    )
                 })
 
-        for campo in ['ponto_kilometrico', 'marco_topografico']:
+        for campo in ["ponto_kilometrico", "marco_topografico"]:
             valor = getattr(self, campo)
             ultimo = self._ultimo_numero(valor)
 
             if ultimo is None:
                 continue
 
-            if self.via == '1' and ultimo % 2 == 0:
+            if self.via == "1" and ultimo % 2 == 0:
                 raise ValidationError({
-                    campo: f'Na Via 01, o {campo.upper()} deve terminar em número ímpar.'
+                    campo: f"Na Via 01, o {campo.upper()} deve terminar em número ímpar."
                 })
 
-            if self.via == '2' and ultimo % 2 != 0:
+            if self.via == "2" and ultimo % 2 != 0:
                 raise ValidationError({
-                    campo: f'Na Via 02, o {campo.upper()} deve terminar em número par.'
+                    campo: f"Na Via 02, o {campo.upper()} deve terminar em número par."
                 })
 
     def save(self, *args, **kwargs):
@@ -137,63 +143,65 @@ class Trilho(models.Model):
 
 class Inspecao(models.Model):
     TIPO_INSPECAO_CHOICES = [
-        ('rotina', 'Rotina'),
-        ('preventiva', 'Preventiva'),
-        ('corretiva', 'Corretiva'),
-        ('extraordinaria', 'Extraordinária'),
+        ("rotina", "Rotina"),
+        ("preventiva", "Preventiva"),
+        ("corretiva", "Corretiva"),
+        ("extraordinaria", "Extraordinária"),
     ]
 
     trilho = models.ForeignKey(
         Trilho,
         on_delete=models.CASCADE,
-        related_name='inspecoes'
+        related_name="inspecoes",
     )
     data_inspecao = models.DateField()
     hora_inspecao = models.TimeField()
     inspetor = models.CharField(max_length=100)
-    tipo_inspecao = models.CharField(max_length=20, choices=TIPO_INSPECAO_CHOICES, default='rotina')
+    tipo_inspecao = models.CharField(max_length=20, choices=TIPO_INSPECAO_CHOICES, default="rotina")
     observacoes = models.TextField(blank=True, null=True)
 
     class Meta:
-        ordering = ['-data_inspecao', '-hora_inspecao']
+        ordering = ["-data_inspecao", "-hora_inspecao"]
 
     def __str__(self):
         return f"{self.trilho} - {self.data_inspecao} {self.hora_inspecao}"
-    
+
+
 class MedicaoDesgaste(models.Model):
     STATUS_CHOICES = [
-        ('normal', 'Normal'),
-        ('atencao', 'Atenção'),
-        ('critico', 'Crítico'),
+        ("normal", "Normal"),
+        ("atencao", "Atenção"),
+        ("critico", "Crítico"),
     ]
 
     inspecao = models.OneToOneField(
         Inspecao,
         on_delete=models.CASCADE,
-        related_name='medicao'
+        related_name="medicao",
     )
     desgaste_vertical_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     desgaste_lateral_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     observacao_tecnica = models.TextField(blank=True, null=True)
-    status_desgaste = models.CharField(max_length=20, choices=STATUS_CHOICES, default='normal')
+    status_desgaste = models.CharField(max_length=20, choices=STATUS_CHOICES, default="normal")
 
     class Meta:
-        verbose_name = 'Medição de Desgaste'
-        verbose_name_plural = 'Medições de Desgaste'
+        verbose_name = "Medição de Desgaste"
+        verbose_name_plural = "Medições de Desgaste"
 
     def __str__(self):
         return f"Medição - {self.inspecao}"
-    
+
+
 class FaixaLocalizacao(models.Model):
     VIA_CHOICES = [
-        ('1', 'Via 01'),
-        ('2', 'Via 02'),
+        ("1", "Via 01"),
+        ("2", "Via 02"),
     ]
 
     ponto_operacional = models.ForeignKey(
         PontoOperacional,
         on_delete=models.CASCADE,
-        related_name='faixas_localizacao'
+        related_name="faixas_localizacao",
     )
     via = models.CharField(max_length=1, choices=VIA_CHOICES)
     mt_inicial = models.CharField(max_length=30, blank=True, null=True)
@@ -203,24 +211,27 @@ class FaixaLocalizacao(models.Model):
     observacoes = models.TextField(blank=True, null=True)
 
     class Meta:
-        verbose_name = 'Faixa de Localização'
-        verbose_name_plural = 'Faixas de Localização'
-        unique_together = ('ponto_operacional', 'via')
+        verbose_name = "Faixa de Localização"
+        verbose_name_plural = "Faixas de Localização"
+        unique_together = ("ponto_operacional", "via")
 
     def _ultimo_numero(self, valor):
         if not valor:
             return None
-        numeros = ''.join(ch if ch.isdigit() else ' ' for ch in valor).split()
+
+        numeros = "".join(ch if ch.isdigit() else " " for ch in valor).split()
+
         if not numeros:
             return None
+
         return int(numeros[-1])
 
     def clean(self):
         campos = [
-            'mt_inicial',
-            'ponto_kilometrico_inicial',
-            'mt_final',
-            'ponto_kilometrico_final',
+            "mt_inicial",
+            "ponto_kilometrico_inicial",
+            "mt_final",
+            "ponto_kilometrico_final",
         ]
 
         for campo in campos:
@@ -230,14 +241,14 @@ class FaixaLocalizacao(models.Model):
             if ultimo is None:
                 continue
 
-            if self.via == '1' and ultimo % 2 == 0:
+            if self.via == "1" and ultimo % 2 == 0:
                 raise ValidationError({
-                    campo: f'Na Via 01, {campo} deve terminar em número ímpar.'
+                    campo: f"Na Via 01, {campo} deve terminar em número ímpar."
                 })
 
-            if self.via == '2' and ultimo % 2 != 0:
+            if self.via == "2" and ultimo % 2 != 0:
                 raise ValidationError({
-                    campo: f'Na Via 02, {campo} deve terminar em número par.'
+                    campo: f"Na Via 02, {campo} deve terminar em número par."
                 })
 
     def save(self, *args, **kwargs):
@@ -247,10 +258,11 @@ class FaixaLocalizacao(models.Model):
     def __str__(self):
         return f"{self.ponto_operacional} - Via {self.via}"
 
+
 class ReferenciaLinearPKMT(models.Model):
     VIA_CHOICES = [
-        ('1', 'Via 01'),
-        ('2', 'Via 02'),
+        ("1", "Via 01"),
+        ("2", "Via 02"),
     ]
 
     via = models.CharField(max_length=1, choices=VIA_CHOICES)
@@ -260,12 +272,16 @@ class ReferenciaLinearPKMT(models.Model):
     observacoes = models.TextField(blank=True, null=True)
 
     class Meta:
-        verbose_name = 'Referência Linear PK/MT'
-        verbose_name_plural = 'Referências Lineares PK/MT'
-        ordering = ['via', 'marco_topografico']
+        verbose_name = "Referência Linear PK/MT"
+        verbose_name_plural = "Referências Lineares PK/MT"
+        ordering = ["via", "marco_topografico"]
 
     def __str__(self):
-        return f"Via {self.via} - Marco Topográfico {self.marco_topografico} - PK {self.ponto_kilometrico} - {self.local_excel}"
+        return (
+            f"Via {self.via} - Marco Topográfico {self.marco_topografico} - "
+            f"PK {self.ponto_kilometrico} - {self.local_excel}"
+        )
+
 
 class TipoSetor(models.TextChoices):
     TRECHO = "trecho", "Trecho"
@@ -326,7 +342,7 @@ class InspecaoTrecho(models.Model):
     setor = models.ForeignKey(
         SetorInspecao,
         on_delete=models.PROTECT,
-        related_name="inspecoes"
+        related_name="inspecoes",
     )
     data_inspecao = models.DateField()
     hora_inspecao = models.TimeField()
@@ -334,12 +350,12 @@ class InspecaoTrecho(models.Model):
     via = models.CharField(
         max_length=10,
         choices=ViaChoices.choices,
-        blank=True
+        blank=True,
     )
     trilho = models.CharField(
         max_length=1,
         choices=TrilhoChoices.choices,
-        blank=True
+        blank=True,
     )
 
     estacao_referencia = models.CharField(max_length=80, blank=True)
@@ -388,17 +404,17 @@ class OcorrenciaInspecaoTrecho(models.Model):
     inspecao = models.ForeignKey(
         InspecaoTrecho,
         on_delete=models.CASCADE,
-        related_name="ocorrencias"
+        related_name="ocorrencias",
     )
     item = models.ForeignKey(
         ItemInspecao,
         on_delete=models.PROTECT,
-        related_name="ocorrencias"
+        related_name="ocorrencias",
     )
     criticidade = models.CharField(
         max_length=10,
         choices=CriticidadeChoices.choices,
-        default=CriticidadeChoices.MEDIA
+        default=CriticidadeChoices.MEDIA,
     )
     observacao = models.TextField(blank=True)
     foto = models.ImageField(upload_to="inspecoes/ocorrencias/", blank=True, null=True)
@@ -411,43 +427,66 @@ class OcorrenciaInspecaoTrecho(models.Model):
 
     def __str__(self):
         return f"{self.item.nome} - {self.inspecao}"
-    
+
 
 class TrocaTrilho(models.Model):
     VIA_CHOICES = [
-        ('1', 'Via 01'),
-        ('2', 'Via 02'),
+        ("1", "Via 01"),
+        ("2", "Via 02"),
     ]
 
     TRILHO_CHOICES = [
-        ('A', 'Trilho A'),
-        ('B', 'Trilho B'),
-        ('C', 'Trilho C'),
-        ('D', 'Trilho D'),
+        ("A", "Trilho A"),
+        ("B", "Trilho B"),
+        ("C", "Trilho C"),
+        ("D", "Trilho D"),
     ]
 
     PERFIL_TRILHO_CHOICES = [
-        ('UIC60', 'UIC 60'),
+        ("UIC60", "UIC 60"),
     ]
 
     CLASSE_TRILHO_CHOICES = [
-        ('260', '260'),
-        ('350', '350'),
-        ('400', '400'),
+        ("260", "260"),
+        ("350", "350"),
+        ("400", "400"),
     ]
 
     TIPO_SOLDA_CHOICES = [
-        ('thermit', 'Thermit'),
-        ('rail_tech', 'Rail Tech'),
+        ("thermit", "Thermit"),
+        ("rail_tech", "Rail Tech"),
     ]
-    
+
     SIM_NAO_CHOICES = [
-        ('sim', 'Sim'),
-        ('nao', 'Não'),
-]
+        ("sim", "Sim"),
+        ("nao", "Não"),
+    ]
+    MOTIVO_TROCA_CHOICES = [
+        ("programada", "Programada"),
+        ("trinca", "Trinca"),
+        ("desgaste", "Desgaste"),
+    ]
 
     data_troca = models.DateField()
-    hora_troca = models.TimeField()
+
+    # Campo antigo mantido para compatibilidade com cadastros já existentes.
+    hora_troca = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name="Hora da troca",
+    )
+
+    hora_inicio_troca = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name="Hora início da troca",
+    )
+
+    hora_fim_troca = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name="Hora fim da troca",
+    )
 
     via = models.CharField(max_length=1, choices=VIA_CHOICES)
     trilho = models.CharField(max_length=1, choices=TRILHO_CHOICES)
@@ -460,33 +499,33 @@ class TrocaTrilho(models.Model):
     tamanho_trilho_m = models.DecimalField(max_digits=8, decimal_places=2)
 
     medida_folga_mm = models.DecimalField(
-    max_digits=6,
-    decimal_places=2,
-    null=True,
-    blank=True,
-    verbose_name="Medida da folga (mm)"
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Medida da folga (mm)",
     )
 
     solda_fechamento = models.CharField(
-    max_length=3,
-    choices=SIM_NAO_CHOICES,
-    blank=True,
-    verbose_name="Solda de fechamento?"
+        max_length=3,
+        choices=SIM_NAO_CHOICES,
+        blank=True,
+        verbose_name="Solda de fechamento?",
     )
 
     trilho_transicao = models.CharField(
-    max_length=3,
-    choices=SIM_NAO_CHOICES,
-    blank=True,
-    verbose_name="Trilho de transição?"
+        max_length=3,
+        choices=SIM_NAO_CHOICES,
+        blank=True,
+        verbose_name="Trilho de transição?",
     )
-    
+
     temperatura_antes_solda_c = models.DecimalField(
-    max_digits=5,
-    decimal_places=2,
-    null=True,
-    blank=True,
-    verbose_name="Temperatura antes da solda (°C)"
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Temperatura antes da solda (°C)",
     )
 
     temperatura_depois_solda_c = models.DecimalField(
@@ -494,15 +533,15 @@ class TrocaTrilho(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name="Temperatura depois da solda (°C)"
+        verbose_name="Temperatura depois da solda (°C)",
     )
 
     tempo_aquecimento_seg = models.DecimalField(
-        max_digits=6,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name="Tempo de aquecimento (s)"
+    max_digits=6,
+    decimal_places=2,
+    null=True,
+    blank=True,
+    verbose_name="Tempo de aquecimento (min)"
     )
 
     tempo_vazao_seg = models.DecimalField(
@@ -510,21 +549,27 @@ class TrocaTrilho(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name="Tempo de vazão (s)"
+        verbose_name="Tempo de vazão (s)",
     )
-    
+
     imagem = models.ImageField(
         upload_to="trocas_trilho/",
         blank=True,
         null=True,
-        verbose_name="Imagem"
+        verbose_name="Imagem",
     )
     
+    motivo_troca = models.CharField(
+    max_length=20,
+    choices=MOTIVO_TROCA_CHOICES,
+    blank=True,
+    verbose_name="Motivo da troca"
+)
+
     perfil_trilho = models.CharField(max_length=20, choices=PERFIL_TRILHO_CHOICES, blank=True)
     classe_trilho = models.CharField(max_length=10, choices=CLASSE_TRILHO_CHOICES, blank=True)
     tipo_solda = models.CharField(max_length=20, choices=TIPO_SOLDA_CHOICES, blank=True)
 
-    motivo_troca = models.CharField(max_length=120, blank=True)
     os_numero = models.CharField(max_length=50, blank=True)
     responsavel = models.CharField(max_length=120)
     observacoes = models.TextField(blank=True)
@@ -533,31 +578,41 @@ class TrocaTrilho(models.Model):
     atualizado_em = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-data_troca', '-hora_troca']
-        verbose_name = 'Troca de Trilho'
-        verbose_name_plural = 'Trocas de Trilho'
+        ordering = ["-data_troca", "-hora_inicio_troca", "-hora_troca"]
+        verbose_name = "Troca de Trilho"
+        verbose_name_plural = "Trocas de Trilho"
 
     def __str__(self):
-        return f'{self.data_troca} - Via {self.via} - Trilho {self.trilho}'
+        return f"{self.data_troca} - Via {self.via} - Trilho {self.trilho}"
 
     def clean(self):
         errors = {}
 
         pares_validos = {
-            '1': ['A', 'B'],
-            '2': ['C', 'D'],
+            "1": ["A", "B"],
+            "2": ["C", "D"],
         }
 
         if self.via and self.trilho:
             if self.trilho not in pares_validos.get(self.via, []):
-                errors['trilho'] = f'Para a Via {self.via}, os trilhos permitidos são {", ".join(pares_validos[self.via])}.'
+                errors["trilho"] = (
+                    f'Para a Via {self.via}, os trilhos permitidos são '
+                    f'{", ".join(pares_validos[self.via])}.'
+                )
 
         if self.tamanho_trilho_m is not None and self.tamanho_trilho_m <= 0:
-            errors['tamanho_trilho_m'] = 'Informe um tamanho de trilho maior que zero.'
+            errors["tamanho_trilho_m"] = "Informe um tamanho de trilho maior que zero."
+
+        if self.hora_inicio_troca and self.hora_fim_troca:
+            if self.hora_fim_troca < self.hora_inicio_troca:
+                errors["hora_fim_troca"] = "A hora fim não pode ser menor que a hora início."
 
         if errors:
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
+        if not self.hora_troca and self.hora_inicio_troca:
+            self.hora_troca = self.hora_inicio_troca
+
         self.full_clean()
         super().save(*args, **kwargs)
