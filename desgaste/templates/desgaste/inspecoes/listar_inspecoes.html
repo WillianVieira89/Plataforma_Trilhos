@@ -5,62 +5,310 @@
 {% block page_actions %}
 <div class="page-actions">
     <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
-    <a href="{% url 'nova_inspecao' %}" class="btn btn-primary">Novo cadastro</a>
+    <a href="{% url 'nova_inspecao' %}" class="btn btn-primary">Nova inspeção</a>
 </div>
 {% endblock %}
 
 {% block content %}
+<style>
+    .dias-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .dia-card {
+        border: 1px solid #e8def8;
+        border-radius: 18px;
+        background: #ffffff;
+        box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
+        overflow: hidden;
+    }
+
+    .dia-card summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 20px 24px;
+        background: #faf7ff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid transparent;
+    }
+
+    .dia-card[open] summary {
+        border-bottom-color: #eadcff;
+    }
+
+    .dia-card summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .dia-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .dia-titulo {
+        color: var(--primary);
+        font-size: 22px;
+        font-weight: 800;
+    }
+
+    .dia-subtitulo {
+        color: #6b7280;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .dia-acoes {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .badge-total {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: #ede9fe;
+        color: #7c3aed;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .seta-expandir {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        background: #ffffff;
+        color: var(--primary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        border: 1px solid #e8def8;
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .dia-card[open] .seta-expandir {
+        transform: rotate(180deg);
+    }
+
+    .dia-conteudo {
+        padding: 20px 24px 24px 24px;
+    }
+
+    .badge-criticidade {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .badge-baixa {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-media {
+        background: #fef9c3;
+        color: #854d0e;
+    }
+
+    .badge-alta {
+        background: #ffedd5;
+        color: #9a3412;
+    }
+
+    .badge-critica {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .acoes-linha {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-small {
+        padding: 8px 12px;
+        font-size: 14px;
+        border-radius: 10px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+    }
+
+    .btn-danger {
+        background: #dc2626;
+        color: #ffffff;
+        border: none;
+    }
+
+    .btn-danger:hover {
+        background: #b91c1c;
+        color: #ffffff;
+    }
+
+    .foto-link {
+        font-weight: 700;
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    .foto-link:hover {
+        text-decoration: underline;
+    }
+
+    .table-wrapper table {
+        min-width: 1200px;
+    }
+
+    @media (max-width: 700px) {
+        .dia-card summary {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .dia-acoes {
+            width: 100%;
+            justify-content: space-between;
+        }
+    }
+</style>
+
 <div class="page-header">
     <div>
         <h1 class="page-title">Inspeções</h1>
-        <p class="page-subtitle">Consulta e acompanhamento das inspeções cadastradas no sistema.</p>
+        <p class="page-subtitle">
+            Consulta das ocorrências registradas durante as inspeções de via, agrupadas por dia.
+        </p>
     </div>
+
     <div>
         <a href="{% url 'nova_inspecao' %}" class="btn btn-primary">Nova inspeção</a>
     </div>
 </div>
 
-{% if inspecoes %}
-<div class="card">
-    <div class="card-header">Lista de inspeções</div>
-    <div class="card-body">
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Hora</th>
-                        <th>Setor</th>
-                        <th>Via</th>
-                        <th>Trilho</th>
-                        <th>Responsável</th>
-                        <th>Ocorrências</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for inspecao in inspecoes %}
-                    <tr>
-                        <td>{{ inspecao.data_inspecao|date:"d/m/Y" }}</td>
-                        <td>{{ inspecao.hora_inspecao|time:"H:i" }}</td>
-                        <td>{{ inspecao.setor.nome }}</td>
-                        <td>{{ inspecao.get_via_display }}</td>
-                        <td>{{ inspecao.get_trilho_display }}</td>
-                        <td>{{ inspecao.responsavel }}</td>
-                        <td>{{ inspecao.ocorrencias.count }}</td>
-                        <td>
-                            <a href="{% url 'editar_inspecao' inspecao.id %}" class="btn btn-warning">Editar</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+{% if ocorrencias %}
+    {% regroup ocorrencias by inspecao.data_inspecao as dias_inspecao %}
+
+    <div class="dias-container">
+        {% for dia in dias_inspecao %}
+            <details class="dia-card">
+                <summary>
+                    <div class="dia-info">
+                        <div class="dia-titulo">
+                            {{ dia.grouper|date:"d/m/Y" }}
+                        </div>
+
+                        <div class="dia-subtitulo">
+                            Clique para visualizar as ocorrências registradas neste dia.
+                        </div>
+                    </div>
+
+                    <div class="dia-acoes">
+                        <span class="badge-total">
+                            {{ dia.list|length }} ocorrência{% if dia.list|length > 1 %}s{% endif %}
+                        </span>
+
+                        <span class="seta-expandir">⌄</span>
+                    </div>
+                </summary>
+
+                <div class="dia-conteudo">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Início</th>
+                                    <th>Fim</th>
+                                    <th>Setor</th>
+                                    <th>Via</th>
+                                    <th>Trilho</th>
+                                    <th>MT problema</th>
+                                    <th>Item</th>
+                                    <th>Criticidade</th>
+                                    <th>Responsável</th>
+                                    <th>Foto</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for ocorrencia in dia.list %}
+                                    <tr>
+                                        <td>{{ ocorrencia.inspecao.hora_inspecao|time:"H:i" }}</td>
+
+                                        <td>
+                                            {% if ocorrencia.inspecao.hora_fim_inspecao %}
+                                                {{ ocorrencia.inspecao.hora_fim_inspecao|time:"H:i" }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+
+                                        <td>{{ ocorrencia.inspecao.setor.nome }}</td>
+                                        <td>{{ ocorrencia.inspecao.get_via_display }}</td>
+                                        <td>{{ ocorrencia.get_trilho_display }}</td>
+                                        <td>{{ ocorrencia.mt_problema|default:"-" }}</td>
+                                        <td>{{ ocorrencia.item.nome }}</td>
+
+                                        <td>
+                                            <span class="badge-criticidade badge-{{ ocorrencia.criticidade }}">
+                                                {{ ocorrencia.get_criticidade_display }}
+                                            </span>
+                                        </td>
+
+                                        <td>{{ ocorrencia.inspecao.responsavel }}</td>
+
+                                        <td>
+                                            {% if ocorrencia.foto %}
+                                                <a href="{{ ocorrencia.foto.url }}" target="_blank" class="foto-link">Ver foto</a>
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+
+                                        <td>
+                                            <div class="acoes-linha">
+                                                <a href="{% url 'editar_ocorrencia_inspecao' ocorrencia.id %}" class="btn btn-warning btn-small">
+                                                    Editar
+                                                </a>
+
+                                                <a href="{% url 'excluir_ocorrencia_inspecao' ocorrencia.id %}" class="btn btn-danger btn-small">
+                                                    Excluir
+                                                </a>
+
+                                                <a href="{% url 'editar_inspecao' ocorrencia.inspecao.id %}" class="btn btn-secondary btn-small">
+                                                    Editar inspeção
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+
+                        </table>
+                    </div>
+                </div>
+            </details>
+        {% endfor %}
     </div>
-</div>
 {% else %}
-<div class="empty-state">
-    Nenhuma inspeção cadastrada.
-</div>
+    <div class="empty-state">
+        Nenhuma ocorrência cadastrada.
+    </div>
 {% endif %}
 {% endblock %}

@@ -7,6 +7,7 @@ from .forms import (
     RegistroInspecaoForm,
     InspecaoForm,
     OcorrenciaInspecaoFormSet,
+    OcorrenciaInspecaoTrechoForm,
     TrocaTrilhoForm,
 )
 from .models import (
@@ -16,6 +17,7 @@ from .models import (
     Trilho,
     PontoOperacional,
     TrocaTrilho,
+    OcorrenciaInspecaoTrecho,
 )
 
 MT_TRECHO_INICIAL = 1
@@ -186,32 +188,39 @@ def historico_inspecoes(request):
         "filtro_trilho": trilho_id or "",
     })
 
-
 def listar_inspecoes(request):
-    inspecoes = (
-        InspecaoTrecho.objects
-        .select_related("setor")
-        .prefetch_related("ocorrencias__item")
-        .order_by("-data_inspecao", "-hora_inspecao")
+    ocorrencias = (
+        OcorrenciaInspecaoTrecho.objects
+        .select_related("inspecao__setor", "item")
+        .order_by(
+            "inspecao__data_inspecao",
+            "inspecao__hora_inspecao",
+            "trilho",
+            "mt_problema",
+            "item__nome",
+        )
     )
 
     setor_id = request.GET.get("setor")
     data_ini = request.GET.get("data_ini")
     data_fim = request.GET.get("data_fim")
+    via = request.GET.get("via")
 
     if setor_id:
-        inspecoes = inspecoes.filter(setor_id=setor_id)
+        ocorrencias = ocorrencias.filter(inspecao__setor_id=setor_id)
 
     if data_ini:
-        inspecoes = inspecoes.filter(data_inspecao__gte=data_ini)
+        ocorrencias = ocorrencias.filter(inspecao__data_inspecao__gte=data_ini)
 
     if data_fim:
-        inspecoes = inspecoes.filter(data_inspecao__lte=data_fim)
+        ocorrencias = ocorrencias.filter(inspecao__data_inspecao__lte=data_fim)
+
+    if via:
+        ocorrencias = ocorrencias.filter(inspecao__via=via)
 
     return render(request, "desgaste/inspecoes/listar_inspecoes.html", {
-        "inspecoes": inspecoes,
+        "ocorrencias": ocorrencias,
     })
-
 
 def nova_inspecao(request):
     if request.method == "POST":
@@ -257,6 +266,48 @@ def editar_inspecao(request, pk):
         "form": form,
         "formset": formset,
         "titulo": "Editar Inspeção",
+    })
+    
+def editar_ocorrencia_inspecao(request, pk):
+    ocorrencia = get_object_or_404(
+        OcorrenciaInspecaoTrecho.objects.select_related("inspecao__setor", "item"),
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        form = OcorrenciaInspecaoTrechoForm(
+            request.POST,
+            request.FILES,
+            instance=ocorrencia,
+        )
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Ocorrência atualizada com sucesso.")
+            return redirect("listar_inspecoes")
+    else:
+        form = OcorrenciaInspecaoTrechoForm(instance=ocorrencia)
+
+    return render(request, "desgaste/inspecoes/form_ocorrencia.html", {
+        "form": form,
+        "ocorrencia": ocorrencia,
+        "titulo": "Editar ocorrência",
+    })
+
+
+def excluir_ocorrencia_inspecao(request, pk):
+    ocorrencia = get_object_or_404(
+        OcorrenciaInspecaoTrecho.objects.select_related("inspecao__setor", "item"),
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        ocorrencia.delete()
+        messages.success(request, "Ocorrência excluída com sucesso.")
+        return redirect("listar_inspecoes")
+
+    return render(request, "desgaste/inspecoes/confirmar_exclusao_ocorrencia.html", {
+        "ocorrencia": ocorrencia,
     })
 
 

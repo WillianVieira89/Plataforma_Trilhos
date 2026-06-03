@@ -1,7 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 
-
 class Linha(models.Model):
     nome = models.CharField(max_length=100, unique=True)
 
