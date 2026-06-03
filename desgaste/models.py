@@ -345,13 +345,25 @@ class InspecaoTrecho(models.Model):
         related_name="inspecoes",
     )
     data_inspecao = models.DateField()
-    hora_inspecao = models.TimeField()
+
+    hora_inspecao = models.TimeField(
+        verbose_name="Hora início da inspeção",
+    )
+
+    hora_fim_inspecao = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name="Hora fim da inspeção",
+    )
 
     via = models.CharField(
         max_length=10,
         choices=ViaChoices.choices,
         blank=True,
     )
+
+    # Campo mantido como legado. A inspeção atual é por via completa:
+    # Via 01 = Trilhos A/B | Via 02 = Trilhos C/D.
     trilho = models.CharField(
         max_length=1,
         choices=TrilhoChoices.choices,
@@ -391,6 +403,10 @@ class InspecaoTrecho(models.Model):
 
         if self.via == ViaChoices.VIA_02 and self.trilho and self.trilho not in [TrilhoChoices.C, TrilhoChoices.D]:
             errors["trilho"] = "Na Via 02, o trilho deve ser C ou D."
+
+        if self.hora_inspecao and self.hora_fim_inspecao:
+            if self.hora_fim_inspecao < self.hora_inspecao:
+                errors["hora_fim_inspecao"] = "A hora fim não pode ser menor que a hora início."
 
         if errors:
             raise ValidationError(errors)
@@ -461,6 +477,7 @@ class TrocaTrilho(models.Model):
         ("sim", "Sim"),
         ("nao", "Não"),
     ]
+
     MOTIVO_TROCA_CHOICES = [
         ("programada", "Programada"),
         ("trinca", "Trinca"),
@@ -469,7 +486,6 @@ class TrocaTrilho(models.Model):
 
     data_troca = models.DateField()
 
-    # Campo antigo mantido para compatibilidade com cadastros já existentes.
     hora_troca = models.TimeField(
         null=True,
         blank=True,
@@ -537,11 +553,11 @@ class TrocaTrilho(models.Model):
     )
 
     tempo_aquecimento_seg = models.DecimalField(
-    max_digits=6,
-    decimal_places=2,
-    null=True,
-    blank=True,
-    verbose_name="Tempo de aquecimento (min)"
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Tempo de aquecimento (min)",
     )
 
     tempo_vazao_seg = models.DecimalField(
@@ -558,13 +574,13 @@ class TrocaTrilho(models.Model):
         null=True,
         verbose_name="Imagem",
     )
-    
+
     motivo_troca = models.CharField(
-    max_length=20,
-    choices=MOTIVO_TROCA_CHOICES,
-    blank=True,
-    verbose_name="Motivo da troca"
-)
+        max_length=20,
+        choices=MOTIVO_TROCA_CHOICES,
+        blank=True,
+        verbose_name="Motivo da troca",
+    )
 
     perfil_trilho = models.CharField(max_length=20, choices=PERFIL_TRILHO_CHOICES, blank=True)
     classe_trilho = models.CharField(max_length=10, choices=CLASSE_TRILHO_CHOICES, blank=True)
@@ -584,6 +600,21 @@ class TrocaTrilho(models.Model):
 
     def __str__(self):
         return f"{self.data_troca} - Via {self.via} - Trilho {self.trilho}"
+
+    @staticmethod
+    def extrair_numero_mt(valor):
+        import re
+
+        if valor is None:
+            return None
+
+        texto = str(valor).strip()
+        numeros = re.findall(r"\d+", texto)
+
+        if not numeros:
+            return None
+
+        return int("".join(numeros))
 
     def clean(self):
         errors = {}
@@ -613,6 +644,12 @@ class TrocaTrilho(models.Model):
     def save(self, *args, **kwargs):
         if not self.hora_troca and self.hora_inicio_troca:
             self.hora_troca = self.hora_inicio_troca
+
+        mt_ini_num = self.extrair_numero_mt(self.mt_inicial)
+        mt_fim_num = self.extrair_numero_mt(self.mt_final)
+
+        if mt_ini_num is not None and mt_fim_num is not None:
+            self.tamanho_trilho_m = abs(mt_fim_num - mt_ini_num) * 2
 
         self.full_clean()
         super().save(*args, **kwargs)

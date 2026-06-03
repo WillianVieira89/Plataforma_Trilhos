@@ -5,7 +5,6 @@ from django import forms
 from django.forms import inlineformset_factory
 from django.utils import timezone
 
-
 from .models import (
     PontoOperacional,
     Trilho,
@@ -93,10 +92,12 @@ class RegistroInspecaoForm(forms.Form):
     observacoes = forms.CharField(
         label="Observações da inspeção",
         required=False,
-        widget=forms.Textarea(attrs={
-            "rows": 3,
-            "placeholder": "Observações gerais da inspeção",
-        }),
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "placeholder": "Observações gerais da inspeção",
+            }
+        ),
     )
 
     desgaste_vertical_mm = forms.DecimalField(
@@ -104,10 +105,12 @@ class RegistroInspecaoForm(forms.Form):
         max_digits=6,
         decimal_places=2,
         required=False,
-        widget=forms.NumberInput(attrs={
-            "step": "0.01",
-            "placeholder": "Ex.: 2.50",
-        }),
+        widget=forms.NumberInput(
+            attrs={
+                "step": "0.01",
+                "placeholder": "Ex.: 2.50",
+            }
+        ),
     )
 
     desgaste_lateral_mm = forms.DecimalField(
@@ -115,19 +118,23 @@ class RegistroInspecaoForm(forms.Form):
         max_digits=6,
         decimal_places=2,
         required=False,
-        widget=forms.NumberInput(attrs={
-            "step": "0.01",
-            "placeholder": "Ex.: 1.20",
-        }),
+        widget=forms.NumberInput(
+            attrs={
+                "step": "0.01",
+                "placeholder": "Ex.: 1.20",
+            }
+        ),
     )
 
     observacao_tecnica = forms.CharField(
         label="Observação técnica",
         required=False,
-        widget=forms.Textarea(attrs={
-            "rows": 3,
-            "placeholder": "Observações técnicas da medição",
-        }),
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "placeholder": "Observações técnicas da medição",
+            }
+        ),
     )
 
     status_desgaste = forms.ChoiceField(
@@ -150,12 +157,19 @@ class RegistroInspecaoForm(forms.Form):
         trilho = cleaned_data.get("trilho")
 
         if trilho and ponto_operacional and trilho.ponto_operacional_id != ponto_operacional.id:
-            self.add_error("trilho", "O trilho selecionado não pertence ao ponto operacional escolhido.")
+            self.add_error(
+                "trilho",
+                "O trilho selecionado não pertence ao ponto operacional escolhido.",
+            )
 
         if trilho and via and trilho.via != via:
-            self.add_error("trilho", "O trilho selecionado não pertence à via escolhida.")
+            self.add_error(
+                "trilho",
+                "O trilho selecionado não pertence à via escolhida.",
+            )
 
         return cleaned_data
+
 
 class InspecaoForm(forms.ModelForm):
     class Meta:
@@ -165,7 +179,6 @@ class InspecaoForm(forms.ModelForm):
             "data_inspecao",
             "hora_inspecao",
             "via",
-            "trilho",
             "estacao_referencia",
             "referencia_local",
             "pk_inicial",
@@ -175,12 +188,22 @@ class InspecaoForm(forms.ModelForm):
             "responsavel",
             "observacoes_gerais",
         ]
+
         widgets = {
             "setor": forms.Select(attrs={"class": "form-control"}),
-            "data_inspecao": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
-            "hora_inspecao": forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
+            "data_inspecao": forms.DateInput(
+                attrs={
+                    "type": "date",
+                    "class": "form-control",
+                }
+            ),
+            "hora_inspecao": forms.TimeInput(
+                attrs={
+                    "type": "time",
+                    "class": "form-control",
+                }
+            ),
             "via": forms.Select(attrs={"class": "form-control"}),
-            "trilho": forms.Select(attrs={"class": "form-control"}),
             "estacao_referencia": forms.TextInput(attrs={"class": "form-control"}),
             "referencia_local": forms.TextInput(attrs={"class": "form-control"}),
             "pk_inicial": forms.TextInput(attrs={"class": "form-control"}),
@@ -188,14 +211,23 @@ class InspecaoForm(forms.ModelForm):
             "mt_inicial": forms.TextInput(attrs={"class": "form-control"}),
             "mt_final": forms.TextInput(attrs={"class": "form-control"}),
             "responsavel": forms.TextInput(attrs={"class": "form-control"}),
-            "observacoes_gerais": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+            "observacoes_gerais": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields["setor"].queryset = SetorInspecao.objects.filter(ativo=True).order_by("ordem")
+        self.fields["setor"].queryset = SetorInspecao.objects.filter(
+            ativo=True
+        ).order_by("ordem")
+
         self.fields["data_inspecao"].initial = timezone.localdate()
+        self.fields["via"].label = "Via inspecionada"
 
     def clean(self):
         cleaned_data = super().clean()
@@ -204,7 +236,10 @@ class InspecaoForm(forms.ModelForm):
         via = cleaned_data.get("via")
 
         if setor and setor.tipo == TipoSetor.TRECHO and not via:
-            self.add_error("via", "Para setores do tipo trecho, informe a via.")
+            self.add_error(
+                "via",
+                "Para setores do tipo trecho, informe a via inspecionada.",
+            )
 
         return cleaned_data
 
@@ -213,17 +248,25 @@ class OcorrenciaInspecaoTrechoForm(forms.ModelForm):
     class Meta:
         model = OcorrenciaInspecaoTrecho
         fields = ["item", "criticidade", "observacao", "foto"]
+
         widgets = {
             "item": forms.Select(attrs={"class": "form-control"}),
             "criticidade": forms.Select(attrs={"class": "form-control"}),
-            "observacao": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
+            "observacao": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 2,
+                }
+            ),
             "foto": forms.ClearableFileInput(attrs={"class": "form-control"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields["item"].queryset = ItemInspecao.objects.filter(ativo=True).order_by("nome")
+        self.fields["item"].queryset = ItemInspecao.objects.filter(
+            ativo=True
+        ).order_by("nome")
 
 
 OcorrenciaInspecaoFormSet = inlineformset_factory(
@@ -276,10 +319,12 @@ class TrocaTrilhoForm(forms.ModelForm):
         ]
 
         widgets = {
-            "data_troca": forms.DateInput(attrs={
-                "type": "date",
-                "class": "form-control",
-            }),
+            "data_troca": forms.DateInput(
+                attrs={
+                    "type": "date",
+                    "class": "form-control",
+                }
+            ),
             "hora_inicio_troca": forms.TimeInput(
                 format="%H:%M",
                 attrs={
@@ -294,89 +339,113 @@ class TrocaTrilhoForm(forms.ModelForm):
                     "class": "form-control",
                 },
             ),
-            "via": forms.Select(attrs={
-                "class": "form-control",
-                "id": "id_via",
-            }),
-            "trilho": forms.Select(attrs={
-                "class": "form-control",
-                "id": "id_trilho",
-            }),
-            "referencia_local": forms.TextInput(attrs={
-                "class": "form-control",
-                "placeholder": "Ex.: Plataforma, trecho entre estações, pátio...",
-            }),
-            "mt_inicial": forms.TextInput(attrs={
-                "class": "form-control",
-                "placeholder": "Ex.: MT-123",
-            }),
-            "mt_final": forms.TextInput(attrs={
-                "class": "form-control",
-                "placeholder": "Ex.: MT-145",
-            }),
-            "tamanho_trilho_m": forms.NumberInput(attrs={
-                "class": "form-control",
-                "step": "0.01",
-                "placeholder": "Calculado automaticamente",
-                "readonly": "readonly",
-            }),
-            "medida_folga_mm": forms.NumberInput(attrs={
-                "class": "form-control",
-                "step": "0.01",
-                "placeholder": "Ex.: 5.00",
-            }),
+            "via": forms.Select(
+                attrs={
+                    "class": "form-control",
+                    "id": "id_via",
+                }
+            ),
+            "trilho": forms.Select(
+                attrs={
+                    "class": "form-control",
+                    "id": "id_trilho",
+                }
+            ),
+            "referencia_local": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Ex.: Plataforma, trecho entre estações, pátio...",
+                }
+            ),
+            "mt_inicial": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Ex.: MT-123",
+                }
+            ),
+            "mt_final": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Ex.: MT-145",
+                }
+            ),
+            "tamanho_trilho_m": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                    "placeholder": "Calculado automaticamente",
+                    "readonly": "readonly",
+                }
+            ),
+            "medida_folga_mm": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                    "placeholder": "Ex.: 5.00",
+                }
+            ),
             "solda_fechamento": forms.Select(attrs={"class": "form-control"}),
             "trilho_transicao": forms.Select(attrs={"class": "form-control"}),
-            "temperatura_antes_solda_c": forms.NumberInput(attrs={
-                "class": "form-control",
-                "step": "0.01",
-                "placeholder": "Ex.: 32.50",
-            }),
-            "temperatura_depois_solda_c": forms.NumberInput(attrs={
-                "class": "form-control",
-                "step": "0.01",
-                "placeholder": "Ex.: 45.20",
-            }),
-            "tempo_aquecimento_seg": forms.NumberInput(attrs={
-                "class": "form-control",
-                "step": "0.01",
-                "placeholder": "Minutos",
-            }),
-            "tempo_vazao_seg": forms.NumberInput(attrs={
-                "class": "form-control",
-                "step": "0.01",
-                "placeholder": "Segundos",
-            }),
+            "temperatura_antes_solda_c": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                    "placeholder": "Ex.: 32.50",
+                }
+            ),
+            "temperatura_depois_solda_c": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                    "placeholder": "Ex.: 45.20",
+                }
+            ),
+            "tempo_aquecimento_seg": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                    "placeholder": "Minutos",
+                }
+            ),
+            "tempo_vazao_seg": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                    "placeholder": "Segundos",
+                }
+            ),
             "perfil_trilho": forms.Select(attrs={"class": "form-control"}),
             "classe_trilho": forms.Select(attrs={"class": "form-control"}),
             "tipo_solda": forms.Select(attrs={"class": "form-control"}),
-            "motivo_troca": forms.Select(attrs={
-                "class": "form-control",
-            }),
-            "os_numero": forms.TextInput(attrs={
-                "class": "form-control",
-                "placeholder": "Número da OS",
-            }),
-            "responsavel": forms.TextInput(attrs={
-                "class": "form-control",
-                "placeholder": "Responsável pela troca",
-            }),
-            "observacoes": forms.Textarea(attrs={
-                "class": "form-control",
-                "rows": 4,
-            }),
-            "imagem": forms.ClearableFileInput(attrs={
-                "class": "form-control",
-            }),
+            "motivo_troca": forms.Select(attrs={"class": "form-control"}),
+            "os_numero": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Número da OS",
+                }
+            ),
+            "responsavel": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Responsável pela troca",
+                }
+            ),
+            "observacoes": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                }
+            ),
+            "imagem": forms.ClearableFileInput(attrs={"class": "form-control"}),
         }
-        
+
     def extrair_numero_mt_form(self, valor):
         if valor is None:
             return None
-        
+
         texto = str(valor).strip()
-        numeros = re.findall(r'\d+', texto)
-        
+        numeros = re.findall(r"\d+", texto)
+
         if not numeros:
             return None
 
@@ -401,7 +470,10 @@ class TrocaTrilhoForm(forms.ModelForm):
         self.fields["trilho"].required = True
         self.fields["mt_inicial"].required = True
         self.fields["mt_final"].required = True
-        self.fields["tamanho_trilho_m"].required = True
+
+        # O tamanho é calculado automaticamente no clean().
+        self.fields["tamanho_trilho_m"].required = False
+
         self.fields["responsavel"].required = True
         self.fields["tempo_aquecimento_seg"].label = "Tempo de aquecimento (min)"
         self.fields["motivo_troca"].label = "Motivo da troca"
@@ -454,12 +526,13 @@ class TrocaTrilhoForm(forms.ModelForm):
         mt_fim_num = self.extrair_numero_mt_form(mt_final)
 
         if mt_ini_num is not None and mt_fim_num is not None:
-            tamanho_calculado = abs(mt_fim_num - mt_ini_num)
+            diferenca_mt = abs(mt_fim_num - mt_ini_num)
+            tamanho_calculado = diferenca_mt * 2
 
             if tamanho_calculado <= 0:
                 self.add_error(
                     "mt_final",
-                    "O MT final deve ser diferente do MT inicial."
+                    "O MT final deve ser diferente do MT inicial.",
                 )
             else:
                 cleaned_data["tamanho_trilho_m"] = Decimal(str(tamanho_calculado))

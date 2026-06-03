@@ -13,7 +13,9 @@
 <div class="page-header">
     <div>
         <h1 class="page-title">{{ titulo }}</h1>
-        <p class="page-subtitle">Cadastro de inspeções de trecho e ocorrências encontradas em campo.</p>
+        <p class="page-subtitle">
+            Cadastro de inspeção por via completa. Via 01 contempla os trilhos A e B; Via 02 contempla os trilhos C e D.
+        </p>
     </div>
 </div>
 
@@ -23,65 +25,38 @@
     <div class="card">
         <div class="card-header">Dados da Inspeção</div>
         <div class="card-body">
-            <div class="grid-3">
+            <div class="grid-4">
                 <div class="field">
                     {{ form.setor.label_tag }}
                     {{ form.setor }}
                 </div>
+
                 <div class="field">
                     {{ form.data_inspecao.label_tag }}
                     {{ form.data_inspecao }}
                 </div>
+
                 <div class="field">
                     {{ form.hora_inspecao.label_tag }}
                     {{ form.hora_inspecao }}
                 </div>
-            </div>
 
-            <div class="grid-4">
                 <div class="field">
-                    {{ form.via.label_tag }}
-                    {{ form.via }}
-                </div>
-                <div class="field">
-                    {{ form.trilho.label_tag }}
-                    {{ form.trilho }}
-                </div>
-                <div class="field">
-                    {{ form.estacao_referencia.label_tag }}
-                    {{ form.estacao_referencia }}
-                </div>
-                <div class="field">
-                    {{ form.referencia_local.label_tag }}
-                    {{ form.referencia_local }}
-                </div>
-            </div>
-
-            <div class="grid-4">
-                <div class="field">
-                    {{ form.pk_inicial.label_tag }}
-                    {{ form.pk_inicial }}
-                </div>
-                <div class="field">
-                    {{ form.pk_final.label_tag }}
-                    {{ form.pk_final }}
-                </div>
-                <div class="field">
-                    {{ form.mt_inicial.label_tag }}
-                    {{ form.mt_inicial }}
-                </div>
-                <div class="field">
-                    {{ form.mt_final.label_tag }}
-                    {{ form.mt_final }}
+                    {{ form.hora_fim_inspecao.label_tag }}
+                    {{ form.hora_fim_inspecao }}
                 </div>
             </div>
 
             <div class="grid-2">
                 <div class="field">
+                    {{ form.via.label_tag }}
+                    {{ form.via }}
+                </div>
+
+                <div class="field">
                     {{ form.responsavel.label_tag }}
                     {{ form.responsavel }}
                 </div>
-                <div class="field"></div>
             </div>
 
             <div class="field">
@@ -96,6 +71,12 @@
                     </div>
                 {% endif %}
             {% endfor %}
+
+            {% if form.non_field_errors %}
+                <div class="alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
         </div>
     </div>
 
@@ -103,7 +84,9 @@
         <div class="card-header">Ocorrências</div>
         <div class="card-body">
             <div class="page-actions" style="margin-bottom: 20px;">
-                <button type="button" class="btn btn-primary" onclick="adicionarFormulario()">Adicionar ocorrência</button>
+                <button type="button" class="btn btn-primary" onclick="adicionarFormulario()">
+                    Adicionar ocorrência
+                </button>
             </div>
 
             {{ formset.management_form }}
@@ -152,6 +135,12 @@
                                     </div>
                                 {% endif %}
                             {% endfor %}
+
+                            {% if form_ocorrencia.non_field_errors %}
+                                <div class="alert-danger">
+                                    {{ form_ocorrencia.non_field_errors }}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 {% endfor %}
@@ -169,26 +158,32 @@
 {% block page_scripts %}
 <script>
 function adicionarFormulario() {
-    const totalForms = document.getElementById("id_ocorrenciainspecao_set-TOTAL_FORMS");
+    const prefix = "{{ formset.prefix }}";
+    const totalForms = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
     const container = document.getElementById("formset-container");
-    const formCount = parseInt(totalForms.value);
+
+    if (!totalForms || !container) {
+        return;
+    }
+
+    const formCount = parseInt(totalForms.value, 10);
 
     const emptyForm = `
         <div class="card" style="margin-bottom: 16px;">
             <div class="card-body">
                 <div class="grid-4">
                     <div class="field">
-                        <label for="id_ocorrenciainspecao_set-${formCount}-item">Item</label>
-                        <select name="ocorrenciainspecao_set-${formCount}-item" id="id_ocorrenciainspecao_set-${formCount}-item">
+                        <label for="id_${prefix}-${formCount}-item">Item</label>
+                        <select name="${prefix}-${formCount}-item" id="id_${prefix}-${formCount}-item" class="form-control">
                             {% for item in formset.empty_form.fields.item.queryset %}
-                                <option value="{{ item.id }}">{{ item.nome }}</option>
+                                <option value="{{ item.id }}">{{ item.nome|escapejs }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
                     <div class="field">
-                        <label for="id_ocorrenciainspecao_set-${formCount}-criticidade">Criticidade</label>
-                        <select name="ocorrenciainspecao_set-${formCount}-criticidade" id="id_ocorrenciainspecao_set-${formCount}-criticidade">
+                        <label for="id_${prefix}-${formCount}-criticidade">Criticidade</label>
+                        <select name="${prefix}-${formCount}-criticidade" id="id_${prefix}-${formCount}-criticidade" class="form-control">
                             <option value="baixa">Baixa</option>
                             <option value="media" selected>Média</option>
                             <option value="alta">Alta</option>
@@ -197,16 +192,16 @@ function adicionarFormulario() {
                     </div>
 
                     <div class="field">
-                        <label for="id_ocorrenciainspecao_set-${formCount}-foto">Foto</label>
-                        <input type="file" name="ocorrenciainspecao_set-${formCount}-foto" id="id_ocorrenciainspecao_set-${formCount}-foto">
+                        <label for="id_${prefix}-${formCount}-foto">Foto</label>
+                        <input type="file" name="${prefix}-${formCount}-foto" id="id_${prefix}-${formCount}-foto" class="form-control">
                     </div>
 
                     <div class="field"></div>
                 </div>
 
                 <div class="field">
-                    <label for="id_ocorrenciainspecao_set-${formCount}-observacao">Observação</label>
-                    <textarea name="ocorrenciainspecao_set-${formCount}-observacao" rows="2" id="id_ocorrenciainspecao_set-${formCount}-observacao"></textarea>
+                    <label for="id_${prefix}-${formCount}-observacao">Observação</label>
+                    <textarea name="${prefix}-${formCount}-observacao" rows="2" id="id_${prefix}-${formCount}-observacao" class="form-control"></textarea>
                 </div>
             </div>
         </div>
