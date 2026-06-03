@@ -12,3 +12,22 @@ staticfiles/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Ambiente virtual
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Banco local
+db.sqlite3
+
+# Arquivos enviados pelo usuário
+media/
+
+# Arquivos estáticos coletados
+staticfiles/
+
+# Variáveis de ambiente
+.env
