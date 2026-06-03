@@ -178,55 +178,56 @@ class InspecaoForm(forms.ModelForm):
             "setor",
             "data_inspecao",
             "hora_inspecao",
+            "hora_fim_inspecao",
             "via",
-            "estacao_referencia",
-            "referencia_local",
-            "pk_inicial",
-            "pk_final",
-            "mt_inicial",
-            "mt_final",
             "responsavel",
             "observacoes_gerais",
         ]
 
         widgets = {
             "setor": forms.Select(attrs={"class": "form-control"}),
-            "data_inspecao": forms.DateInput(
-                attrs={
-                    "type": "date",
-                    "class": "form-control",
-                }
-            ),
-            "hora_inspecao": forms.TimeInput(
-                attrs={
-                    "type": "time",
-                    "class": "form-control",
-                }
-            ),
+            "data_inspecao": forms.DateInput(attrs={
+                "type": "date",
+                "class": "form-control",
+            }),
+            "hora_inspecao": forms.TimeInput(attrs={
+                "type": "time",
+                "class": "form-control",
+            }),
+            "hora_fim_inspecao": forms.TimeInput(attrs={
+                "type": "time",
+                "class": "form-control",
+            }),
             "via": forms.Select(attrs={"class": "form-control"}),
-            "estacao_referencia": forms.TextInput(attrs={"class": "form-control"}),
-            "referencia_local": forms.TextInput(attrs={"class": "form-control"}),
-            "pk_inicial": forms.TextInput(attrs={"class": "form-control"}),
-            "pk_final": forms.TextInput(attrs={"class": "form-control"}),
-            "mt_inicial": forms.TextInput(attrs={"class": "form-control"}),
-            "mt_final": forms.TextInput(attrs={"class": "form-control"}),
             "responsavel": forms.TextInput(attrs={"class": "form-control"}),
-            "observacoes_gerais": forms.Textarea(
-                attrs={
-                    "class": "form-control",
-                    "rows": 4,
-                }
-            ),
+            "observacoes_gerais": forms.Textarea(attrs={
+                "class": "form-control",
+                "rows": 4,
+            }),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        agora = timezone.localtime()
+
         self.fields["setor"].queryset = SetorInspecao.objects.filter(
             ativo=True
         ).order_by("ordem")
 
-        self.fields["data_inspecao"].initial = timezone.localdate()
+        self.fields["data_inspecao"].initial = agora.date()
+
+        self.fields["hora_inspecao"].initial = None
+        self.fields["hora_fim_inspecao"].initial = None
+
+        self.fields["hora_inspecao"].required = True
+        self.fields["hora_fim_inspecao"].required = True
+
+        self.fields["hora_inspecao"].input_formats = ["%H:%M"]
+        self.fields["hora_fim_inspecao"].input_formats = ["%H:%M"]
+
+        self.fields["hora_inspecao"].label = "Hora início da inspeção"
+        self.fields["hora_fim_inspecao"].label = "Hora fim da inspeção"
         self.fields["via"].label = "Via inspecionada"
 
     def clean(self):
@@ -234,6 +235,8 @@ class InspecaoForm(forms.ModelForm):
 
         setor = cleaned_data.get("setor")
         via = cleaned_data.get("via")
+        hora_inicio = cleaned_data.get("hora_inspecao")
+        hora_fim = cleaned_data.get("hora_fim_inspecao")
 
         if setor and setor.tipo == TipoSetor.TRECHO and not via:
             self.add_error(
@@ -241,9 +244,13 @@ class InspecaoForm(forms.ModelForm):
                 "Para setores do tipo trecho, informe a via inspecionada.",
             )
 
+        if hora_inicio and hora_fim and hora_fim < hora_inicio:
+            self.add_error(
+                "hora_fim_inspecao",
+                "A hora fim não pode ser menor que a hora início.",
+            )
+
         return cleaned_data
-
-
 class OcorrenciaInspecaoTrechoForm(forms.ModelForm):
     class Meta:
         model = OcorrenciaInspecaoTrecho
