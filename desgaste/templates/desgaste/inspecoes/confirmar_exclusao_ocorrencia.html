@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Excluir ocorrência{% endblock %}
+
+{% block page_actions %}
+<div class="page-actions">
+    <a href="{% url 'listar_inspecoes' %}" class="btn btn-secondary">Voltar ao histórico</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Excluir ocorrência</h1>
+        <p class="page-subtitle">
+            Confirme se deseja excluir somente esta ocorrência. As demais ocorrências da inspeção serão mantidas.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Resumo da ocorrência</div>
+    <div class="card-body">
+        <p><strong>Data:</strong> {{ ocorrencia.inspecao.data_inspecao|date:"d/m/Y" }}</p>
+        <p><strong>Horário:</strong>
+            {{ ocorrencia.inspecao.hora_inspecao|time:"H:i" }}
+            {% if ocorrencia.inspecao.hora_fim_inspecao %}
+                às {{ ocorrencia.inspecao.hora_fim_inspecao|time:"H:i" }}
+            {% endif %}
+        </p>
+        <p><strong>Setor:</strong> {{ ocorrencia.inspecao.setor.nome }}</p>
+        <p><strong>Via:</strong> {{ ocorrencia.inspecao.get_via_display }}</p>
+        <p><strong>Trilho:</strong> {{ ocorrencia.get_trilho_display }}</p>
+        <p><strong>MT do problema:</strong> {{ ocorrencia.mt_problema|default:"-" }}</p>
+        <p><strong>Item:</strong> {{ ocorrencia.item.nome }}</p>
+        <p><strong>Criticidade:</strong> {{ ocorrencia.get_criticidade_display }}</p>
+        <p><strong>Responsável:</strong> {{ ocorrencia.inspecao.responsavel }}</p>
+
+        {% if ocorrencia.foto %}
+            <p>
+                <strong>Foto:</strong>
+                <a href="{{ ocorrencia.foto.url }}" target="_blank">ver imagem</a>
+            </p>
+        {% endif %}
+    </div>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="page-actions">
+        <button type="submit" class="btn btn-danger">Confirmar exclusão</button>
+        <a href="{% url 'listar_inspecoes' %}" class="btn btn-secondary">Cancelar</a>
+    </div>
+</form>
+{% endblock %}
