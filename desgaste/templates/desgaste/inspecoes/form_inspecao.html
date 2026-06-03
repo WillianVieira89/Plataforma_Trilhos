@@ -10,6 +10,44 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    .ocorrencia-card {
+        margin-bottom: 14px;
+    }
+
+    .ocorrencia-card .card-body {
+        padding: 18px;
+    }
+
+    .ocorrencia-linha {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1.25fr 1fr 1.35fr;
+        gap: 16px;
+        align-items: end;
+    }
+
+    .ocorrencia-linha .field {
+        margin-bottom: 0;
+    }
+
+    .ocorrencia-linha input[type="file"] {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    @media (max-width: 1200px) {
+        .ocorrencia-linha {
+            grid-template-columns: repeat(2, minmax(220px, 1fr));
+        }
+    }
+
+    @media (max-width: 700px) {
+        .ocorrencia-linha {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
 <div class="page-header">
     <div>
         <h1 class="page-title">{{ titulo }}</h1>
@@ -91,15 +129,31 @@
 
             {{ formset.management_form }}
 
+            {% if formset.non_form_errors %}
+                <div class="alert-danger">
+                    {{ formset.non_form_errors }}
+                </div>
+            {% endif %}
+
             <div id="formset-container">
                 {% for form_ocorrencia in formset %}
-                    <div class="card" style="margin-bottom: 16px;">
+                    <div class="card ocorrencia-card">
                         <div class="card-body">
                             {% for hidden in form_ocorrencia.hidden_fields %}
                                 {{ hidden }}
                             {% endfor %}
 
-                            <div class="grid-4">
+                            <div class="ocorrencia-linha">
+                                <div class="field">
+                                    {{ form_ocorrencia.trilho.label_tag }}
+                                    {{ form_ocorrencia.trilho }}
+                                </div>
+
+                                <div class="field">
+                                    {{ form_ocorrencia.mt_problema.label_tag }}
+                                    {{ form_ocorrencia.mt_problema }}
+                                </div>
+
                                 <div class="field">
                                     {{ form_ocorrencia.item.label_tag }}
                                     {{ form_ocorrencia.item }}
@@ -114,30 +168,25 @@
                                     {{ form_ocorrencia.foto.label_tag }}
                                     {{ form_ocorrencia.foto }}
                                 </div>
+                            </div>
 
-                                <div class="field">
-                                    {% if form_ocorrencia.instance.pk %}
-                                        {{ form_ocorrencia.DELETE.label_tag }}
-                                        {{ form_ocorrencia.DELETE }}
-                                    {% endif %}
+                            {% if form_ocorrencia.instance.pk %}
+                                <div class="field" style="margin-top: 12px;">
+                                    {{ form_ocorrencia.DELETE.label_tag }}
+                                    {{ form_ocorrencia.DELETE }}
                                 </div>
-                            </div>
-
-                            <div class="field">
-                                {{ form_ocorrencia.observacao.label_tag }}
-                                {{ form_ocorrencia.observacao }}
-                            </div>
+                            {% endif %}
 
                             {% for field in form_ocorrencia %}
                                 {% if field.errors %}
-                                    <div class="alert-danger">
+                                    <div class="alert-danger" style="margin-top: 10px;">
                                         <strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}
                                     </div>
                                 {% endif %}
                             {% endfor %}
 
                             {% if form_ocorrencia.non_field_errors %}
-                                <div class="alert-danger">
+                                <div class="alert-danger" style="margin-top: 10px;">
                                     {{ form_ocorrencia.non_field_errors }}
                                 </div>
                             {% endif %}
@@ -157,6 +206,41 @@
 
 {% block page_scripts %}
 <script>
+function obterTrilhosPermitidosPorVia() {
+    const viaSelect = document.getElementById("id_via");
+    const via = viaSelect ? String(viaSelect.value || "").trim() : "";
+
+    if (via === "VIA_01" || via === "1" || via === "01") {
+        return ["", "A", "B"];
+    }
+
+    if (via === "VIA_02" || via === "2" || via === "02") {
+        return ["", "C", "D"];
+    }
+
+    return [""];
+}
+
+function atualizarTrilhosDasOcorrencias() {
+    const permitidos = obterTrilhosPermitidosPorVia();
+    const selects = document.querySelectorAll('select[name$="-trilho"]');
+
+    selects.forEach(function (select) {
+        const valorAtual = select.value;
+
+        Array.from(select.options).forEach(function (option) {
+            const permitido = permitidos.includes(option.value);
+
+            option.hidden = !permitido;
+            option.disabled = !permitido;
+        });
+
+        if (!permitidos.includes(valorAtual)) {
+            select.value = "";
+        }
+    });
+}
+
 function adicionarFormulario() {
     const prefix = "{{ formset.prefix }}";
     const totalForms = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
@@ -169,9 +253,23 @@ function adicionarFormulario() {
     const formCount = parseInt(totalForms.value, 10);
 
     const emptyForm = `
-        <div class="card" style="margin-bottom: 16px;">
+        <div class="card ocorrencia-card">
             <div class="card-body">
-                <div class="grid-4">
+                <div class="ocorrencia-linha">
+                    <div class="field">
+                        <label for="id_${prefix}-${formCount}-trilho">Trilho</label>
+                        <select name="${prefix}-${formCount}-trilho" id="id_${prefix}-${formCount}-trilho" class="form-control trilho-ocorrencia">
+                            {% for valor, texto in formset.empty_form.fields.trilho.choices %}
+                                <option value="{{ valor|escapejs }}">{{ texto|escapejs }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="id_${prefix}-${formCount}-mt_problema">MT do problema</label>
+                        <input type="text" name="${prefix}-${formCount}-mt_problema" id="id_${prefix}-${formCount}-mt_problema" class="form-control" placeholder="Ex.: MT-123">
+                    </div>
+
                     <div class="field">
                         <label for="id_${prefix}-${formCount}-item">Item</label>
                         <select name="${prefix}-${formCount}-item" id="id_${prefix}-${formCount}-item" class="form-control">
@@ -195,13 +293,6 @@ function adicionarFormulario() {
                         <label for="id_${prefix}-${formCount}-foto">Foto</label>
                         <input type="file" name="${prefix}-${formCount}-foto" id="id_${prefix}-${formCount}-foto" class="form-control">
                     </div>
-
-                    <div class="field"></div>
-                </div>
-
-                <div class="field">
-                    <label for="id_${prefix}-${formCount}-observacao">Observação</label>
-                    <textarea name="${prefix}-${formCount}-observacao" rows="2" id="id_${prefix}-${formCount}-observacao" class="form-control"></textarea>
                 </div>
             </div>
         </div>
@@ -209,6 +300,18 @@ function adicionarFormulario() {
 
     container.insertAdjacentHTML("beforeend", emptyForm);
     totalForms.value = formCount + 1;
+
+    atualizarTrilhosDasOcorrencias();
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+    const viaSelect = document.getElementById("id_via");
+
+    if (viaSelect) {
+        viaSelect.addEventListener("change", atualizarTrilhosDasOcorrencias);
+    }
+
+    atualizarTrilhosDasOcorrencias();
+});
 </script>
 {% endblock %}

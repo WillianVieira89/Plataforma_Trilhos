@@ -422,16 +422,33 @@ class OcorrenciaInspecaoTrecho(models.Model):
         on_delete=models.CASCADE,
         related_name="ocorrencias",
     )
+
+    trilho = models.CharField(
+        max_length=1,
+        choices=TrilhoChoices.choices,
+        blank=True,
+        verbose_name="Trilho da ocorrência",
+    )
+
+    mt_problema = models.CharField(
+        max_length=30,
+        blank=True,
+        default="",
+        verbose_name="MT do problema",
+    )
+
     item = models.ForeignKey(
         ItemInspecao,
         on_delete=models.PROTECT,
         related_name="ocorrencias",
     )
+
     criticidade = models.CharField(
         max_length=10,
         choices=CriticidadeChoices.choices,
         default=CriticidadeChoices.MEDIA,
     )
+
     observacao = models.TextField(blank=True)
     foto = models.ImageField(upload_to="inspecoes/ocorrencias/", blank=True, null=True)
 
@@ -442,9 +459,23 @@ class OcorrenciaInspecaoTrecho(models.Model):
         verbose_name_plural = "Ocorrências da inspeção de trecho"
 
     def __str__(self):
-        return f"{self.item.nome} - {self.inspecao}"
+        trilho = f" - Trilho {self.trilho}" if self.trilho else ""
+        mt = f" - MT {self.mt_problema}" if self.mt_problema else ""
+        return f"{self.item.nome}{trilho}{mt} - {self.inspecao}"
 
+    def clean(self):
+        errors = {}
 
+        via = getattr(self.inspecao, "via", None)
+
+        if via == ViaChoices.VIA_01 and self.trilho and self.trilho not in [TrilhoChoices.A, TrilhoChoices.B]:
+            errors["trilho"] = "Na Via 01, a ocorrência deve ser vinculada ao Trilho A ou B."
+
+        if via == ViaChoices.VIA_02 and self.trilho and self.trilho not in [TrilhoChoices.C, TrilhoChoices.D]:
+            errors["trilho"] = "Na Via 02, a ocorrência deve ser vinculada ao Trilho C ou D."
+
+        if errors:
+            raise ValidationError(errors)
 class TrocaTrilho(models.Model):
     VIA_CHOICES = [
         ("1", "Via 01"),

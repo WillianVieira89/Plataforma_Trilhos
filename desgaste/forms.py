@@ -2,7 +2,7 @@ import re
 from decimal import Decimal
 
 from django import forms
-from django.forms import inlineformset_factory
+from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
 
 from .models import (
@@ -17,6 +17,8 @@ from .models import (
     TipoSetor,
     TrocaTrilho,
     Estacao,
+    ViaChoices,
+    TrilhoChoices,
 )
 
 
@@ -186,24 +188,32 @@ class InspecaoForm(forms.ModelForm):
 
         widgets = {
             "setor": forms.Select(attrs={"class": "form-control"}),
-            "data_inspecao": forms.DateInput(attrs={
-                "type": "date",
-                "class": "form-control",
-            }),
-            "hora_inspecao": forms.TimeInput(attrs={
-                "type": "time",
-                "class": "form-control",
-            }),
-            "hora_fim_inspecao": forms.TimeInput(attrs={
-                "type": "time",
-                "class": "form-control",
-            }),
-            "via": forms.Select(attrs={"class": "form-control"}),
+            "data_inspecao": forms.DateInput(
+                attrs={
+                    "type": "date",
+                    "class": "form-control",
+                }
+            ),
+            "hora_inspecao": forms.TimeInput(
+                attrs={
+                    "type": "time",
+                    "class": "form-control",
+                }
+            ),
+            "hora_fim_inspecao": forms.TimeInput(
+                attrs={
+                    "type": "time",
+                    "class": "form-control",
+                }
+            ),
+            "via": forms.Select(attrs={"class": "form-control", "id": "id_via"}),
             "responsavel": forms.TextInput(attrs={"class": "form-control"}),
-            "observacoes_gerais": forms.Textarea(attrs={
-                "class": "form-control",
-                "rows": 4,
-            }),
+            "observacoes_gerais": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -251,35 +261,104 @@ class InspecaoForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+
 class OcorrenciaInspecaoTrechoForm(forms.ModelForm):
     class Meta:
         model = OcorrenciaInspecaoTrecho
-        fields = ["item", "criticidade", "observacao", "foto"]
+        fields = ["trilho", "mt_problema", "item", "criticidade", "foto"]
 
         widgets = {
-            "item": forms.Select(attrs={"class": "form-control"}),
-            "criticidade": forms.Select(attrs={"class": "form-control"}),
-            "observacao": forms.Textarea(
-                attrs={
-                    "class": "form-control",
-                    "rows": 2,
-                }
-            ),
-            "foto": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "trilho": forms.Select(attrs={
+                "class": "form-control trilho-ocorrencia",
+            }),
+            "mt_problema": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Ex.: MT-123",
+            }),
+            "item": forms.Select(attrs={
+                "class": "form-control",
+            }),
+            "criticidade": forms.Select(attrs={
+                "class": "form-control",
+            }),
+            "foto": forms.ClearableFileInput(attrs={
+                "class": "form-control",
+            }),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.fields["trilho"].required = True
+        self.fields["trilho"].label = "Trilho"
+
+        self.fields["mt_problema"].required = True
+        self.fields["mt_problema"].label = "MT do problema"
 
         self.fields["item"].queryset = ItemInspecao.objects.filter(
             ativo=True
         ).order_by("nome")
 
 
+class OcorrenciaInspecaoTrechoBaseFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+
+        if any(self.errors):
+            return
+
+        via = ""
+
+        if self.data:
+            via = str(self.data.get("via") or "").strip()
+        elif self.instance:
+            via = str(getattr(self.instance, "via", "") or "").strip()
+
+        permitidos_por_via = {
+            ViaChoices.VIA_01: [TrilhoChoices.A, TrilhoChoices.B],
+            ViaChoices.VIA_02: [TrilhoChoices.C, TrilhoChoices.D],
+        }
+
+        permitidos = permitidos_por_via.get(via)
+
+        if not permitidos:
+            return
+
+        for form in self.forms:
+            if not hasattr(form, "cleaned_data"):
+                continue
+
+            cleaned_data = form.cleaned_data
+
+            if not cleaned_data:
+                continue
+
+            if cleaned_data.get("DELETE"):
+                continue
+
+            trilho = cleaned_data.get("trilho")
+
+            if not trilho:
+                continue
+
+            if trilho not in permitidos:
+                if via == ViaChoices.VIA_01:
+                    raise forms.ValidationError(
+                        "Na Via 01, as ocorrências devem ser cadastradas apenas nos Trilhos A ou B."
+                    )
+
+                if via == ViaChoices.VIA_02:
+                    raise forms.ValidationError(
+                        "Na Via 02, as ocorrências devem ser cadastradas apenas nos Trilhos C ou D."
+                    )
+
+
 OcorrenciaInspecaoFormSet = inlineformset_factory(
     InspecaoTrecho,
     OcorrenciaInspecaoTrecho,
     form=OcorrenciaInspecaoTrechoForm,
+    formset=OcorrenciaInspecaoTrechoBaseFormSet,
     extra=1,
     can_delete=True,
 )
@@ -478,7 +557,6 @@ class TrocaTrilhoForm(forms.ModelForm):
         self.fields["mt_inicial"].required = True
         self.fields["mt_final"].required = True
 
-        # O tamanho é calculado automaticamente no clean().
         self.fields["tamanho_trilho_m"].required = False
 
         self.fields["responsavel"].required = True
