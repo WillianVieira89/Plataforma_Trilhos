@@ -3,6 +3,23 @@
 {% block title %}Inspeções{% endblock %}
 
 {% block page_actions %}
+
+<style>
+    .page-actions-direita {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    @media (max-width: 700px) {
+        .page-actions-direita {
+            justify-content: flex-start;
+        }
+    }
+</style>
+
 <div class="page-actions">
     <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
     <a href="{% url 'nova_inspecao' %}" class="btn btn-primary">Nova inspeção</a>
