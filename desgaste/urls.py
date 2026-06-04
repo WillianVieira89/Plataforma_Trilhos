@@ -28,4 +28,6 @@ urlpatterns = [
     path("trocas-trilho/<int:pk>/editar/", views.editar_troca_trilho, name="editar_troca_trilho"),
     
     path("api/itens-inspecao/", views.api_itens_inspecao, name="api_itens_inspecao"),
+    
+    path("inspecoes/exportar-excel/", views.exportar_excel_inspecoes, name="exportar_excel_inspecoes"),
 ]

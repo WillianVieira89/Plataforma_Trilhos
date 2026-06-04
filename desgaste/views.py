@@ -2,8 +2,9 @@ import re
 
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import never_cache
+from .relatorios import gerar_excel_ocorrencias_inspecao
 
 from .forms import (
     RegistroInspecaoForm,
@@ -21,6 +22,9 @@ from .models import (
     TrocaTrilho,
     OcorrenciaInspecaoTrecho,
     ItemInspecao,
+    ViaChoices,
+    TrilhoChoices,
+    CriticidadeChoices,
 )
 
 MT_TRECHO_INICIAL = 1
@@ -80,7 +84,6 @@ ESTACOES_MAPA = [
     {"sigla": "CKB", "nome": "Chácara Klabin", "via": "2", "mt_inicial": 9874, "mt_final": 9942},
 ]
 
-
 def extrair_numero_mt(valor):
     if valor is None:
         return None
@@ -93,10 +96,8 @@ def extrair_numero_mt(valor):
 
     return int("".join(numeros))
 
-
 def valor_campo(obj, nome_campo, default=""):
     return getattr(obj, nome_campo, default)
-
 
 def valor_display(obj, nome_campo):
     metodo = getattr(obj, f"get_{nome_campo}_display", None)
@@ -106,7 +107,6 @@ def valor_display(obj, nome_campo):
         except Exception:
             return ""
     return ""
-
 
 def registrar_inspecao(request):
     all_pontos = PontoOperacional.objects.select_related("estacao").all().order_by("ordem")
@@ -147,7 +147,6 @@ def registrar_inspecao(request):
         "all_pontos": all_pontos,
         "all_trilhos": all_trilhos,
     })
-
 
 def historico_inspecoes(request):
     pontos = PontoOperacional.objects.select_related("estacao").all().order_by("ordem")
@@ -191,7 +190,7 @@ def historico_inspecoes(request):
         "filtro_trilho": trilho_id or "",
     })
 
-def listar_inspecoes(request):
+def obter_ocorrencias_filtradas(request):
     ocorrencias = (
         OcorrenciaInspecaoTrecho.objects
         .select_related("inspecao__setor", "item")
@@ -204,26 +203,79 @@ def listar_inspecoes(request):
         )
     )
 
-    setor_id = request.GET.get("setor")
-    data_ini = request.GET.get("data_ini")
-    data_fim = request.GET.get("data_fim")
-    via = request.GET.get("via")
+    filtros = {
+        "data_ini": request.GET.get("data_ini", "").strip(),
+        "data_fim": request.GET.get("data_fim", "").strip(),
+        "via": request.GET.get("via", "").strip(),
+        "trilho": request.GET.get("trilho", "").strip(),
+        "mt": request.GET.get("mt", "").strip(),
+        "item": request.GET.get("item", "").strip(),
+        "criticidade": request.GET.get("criticidade", "").strip(),
+    }
 
-    if setor_id:
-        ocorrencias = ocorrencias.filter(inspecao__setor_id=setor_id)
+    if filtros["data_ini"]:
+        ocorrencias = ocorrencias.filter(
+            inspecao__data_inspecao__gte=filtros["data_ini"]
+        )
 
-    if data_ini:
-        ocorrencias = ocorrencias.filter(inspecao__data_inspecao__gte=data_ini)
+    if filtros["data_fim"]:
+        ocorrencias = ocorrencias.filter(
+            inspecao__data_inspecao__lte=filtros["data_fim"]
+        )
 
-    if data_fim:
-        ocorrencias = ocorrencias.filter(inspecao__data_inspecao__lte=data_fim)
+    if filtros["via"]:
+        ocorrencias = ocorrencias.filter(
+            inspecao__via=filtros["via"]
+        )
 
-    if via:
-        ocorrencias = ocorrencias.filter(inspecao__via=via)
+    if filtros["trilho"]:
+        ocorrencias = ocorrencias.filter(
+            trilho=filtros["trilho"]
+        )
+
+    if filtros["mt"]:
+        ocorrencias = ocorrencias.filter(
+            mt_problema__icontains=filtros["mt"]
+        )
+
+    if filtros["item"]:
+        ocorrencias = ocorrencias.filter(
+            item_id=filtros["item"]
+        )
+
+    if filtros["criticidade"]:
+        ocorrencias = ocorrencias.filter(
+            criticidade=filtros["criticidade"]
+        )
+
+    return ocorrencias, filtros
+
+def listar_inspecoes(request):
+    ocorrencias, filtros = obter_ocorrencias_filtradas(request)
+
+    itens = ItemInspecao.objects.filter(ativo=True).order_by("nome")
 
     return render(request, "desgaste/inspecoes/listar_inspecoes.html", {
         "ocorrencias": ocorrencias,
+        "itens": itens,
+        "via_choices": ViaChoices.choices,
+        "trilho_choices": TrilhoChoices.choices,
+        "criticidade_choices": CriticidadeChoices.choices,
+        "filtros": filtros,
     })
+
+def exportar_excel_inspecoes(request):
+    ocorrencias, filtros = obter_ocorrencias_filtradas(request)
+
+    wb = gerar_excel_ocorrencias_inspecao(ocorrencias)
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="relatorio_inspecoes_ocorrencias.xlsx"'
+
+    wb.save(response)
+    return response
 
 def nova_inspecao(request):
     if request.method == "POST":
@@ -246,7 +298,6 @@ def nova_inspecao(request):
         "formset": formset,
         "titulo": "Nova Inspeção",
     })
-
 
 def editar_inspecao(request, pk):
     inspecao = get_object_or_404(InspecaoTrecho, pk=pk)
@@ -297,7 +348,6 @@ def editar_ocorrencia_inspecao(request, pk):
         "titulo": "Editar ocorrência",
     })
 
-
 def excluir_ocorrencia_inspecao(request, pk):
     ocorrencia = get_object_or_404(
         OcorrenciaInspecaoTrecho.objects.select_related("inspecao__setor", "item"),
@@ -312,7 +362,6 @@ def excluir_ocorrencia_inspecao(request, pk):
     return render(request, "desgaste/inspecoes/confirmar_exclusao_ocorrencia.html", {
         "ocorrencia": ocorrencia,
     })
-
 
 def listar_trocas_trilho(request):
     trocas = TrocaTrilho.objects.all().order_by("-data_troca", "-hora_troca")
@@ -342,7 +391,6 @@ def listar_trocas_trilho(request):
         "filtro_data_fim": data_fim or "",
     })
 
-
 def nova_troca_trilho(request):
     if request.method == "POST":
         form = TrocaTrilhoForm(request.POST, request.FILES, instance=TrocaTrilho())
@@ -357,7 +405,6 @@ def nova_troca_trilho(request):
         "form": form,
         "titulo": "Cadastro Troca de Trilho",
     })
-
 
 def editar_troca_trilho(request, pk):
     troca = get_object_or_404(TrocaTrilho, pk=pk)
@@ -376,10 +423,8 @@ def editar_troca_trilho(request, pk):
         "titulo": "Editar Troca de Trilho",
     })
 
-
 def tela_inicial(request):
     return render(request, "desgaste/tela_inicial.html")
-
 
 def mapa_trocas_trilho(request):
     trocas = TrocaTrilho.objects.all().order_by("via", "trilho", "mt_inicial", "data_troca")

@@ -6,6 +6,9 @@
 <div class="page-actions">
     <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
     <a href="{% url 'nova_inspecao' %}" class="btn btn-primary">Nova inspeção</a>
+    <a href="{% url 'exportar_excel_inspecoes' %}?{{ request.GET.urlencode }}" class="btn btn-success">
+    Exportar Excel
+    </a>
 </div>
 {% endblock %}
 
