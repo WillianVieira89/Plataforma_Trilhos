@@ -208,7 +208,6 @@ def obter_ocorrencias_filtradas(request):
         "data_fim": request.GET.get("data_fim", "").strip(),
         "via": request.GET.get("via", "").strip(),
         "trilho": request.GET.get("trilho", "").strip(),
-        "mt": request.GET.get("mt", "").strip(),
         "item": request.GET.get("item", "").strip(),
         "criticidade": request.GET.get("criticidade", "").strip(),
     }
@@ -233,11 +232,6 @@ def obter_ocorrencias_filtradas(request):
             trilho=filtros["trilho"]
         )
 
-    if filtros["mt"]:
-        ocorrencias = ocorrencias.filter(
-            mt_problema__icontains=filtros["mt"]
-        )
-
     if filtros["item"]:
         ocorrencias = ocorrencias.filter(
             item_id=filtros["item"]
@@ -251,17 +245,19 @@ def obter_ocorrencias_filtradas(request):
     return ocorrencias, filtros
 
 def listar_inspecoes(request):
-    ocorrencias, filtros = obter_ocorrencias_filtradas(request)
-
-    itens = ItemInspecao.objects.filter(ativo=True).order_by("nome")
+    ocorrencias = (
+        OcorrenciaInspecaoTrecho.objects
+        .select_related("inspecao__setor", "item")
+        .order_by(
+            "inspecao__data_inspecao",
+            "inspecao__hora_inspecao",
+            "trilho",
+            "item__nome",
+        )
+    )
 
     return render(request, "desgaste/inspecoes/listar_inspecoes.html", {
         "ocorrencias": ocorrencias,
-        "itens": itens,
-        "via_choices": ViaChoices.choices,
-        "trilho_choices": TrilhoChoices.choices,
-        "criticidade_choices": CriticidadeChoices.choices,
-        "filtros": filtros,
     })
 
 def exportar_excel_inspecoes(request):
@@ -276,6 +272,26 @@ def exportar_excel_inspecoes(request):
 
     wb.save(response)
     return response
+
+def relatorio_inspecoes(request):
+    mostrar_previa = request.GET.get("visualizar") == "1"
+
+    ocorrencias, filtros = obter_ocorrencias_filtradas(request)
+
+    if not mostrar_previa:
+        ocorrencias = OcorrenciaInspecaoTrecho.objects.none()
+
+    itens = ItemInspecao.objects.filter(ativo=True).order_by("nome")
+
+    return render(request, "desgaste/relatorios/relatorio_inspecoes.html", {
+        "ocorrencias": ocorrencias,
+        "itens": itens,
+        "via_choices": ViaChoices.choices,
+        "trilho_choices": TrilhoChoices.choices,
+        "criticidade_choices": CriticidadeChoices.choices,
+        "filtros": filtros,
+        "mostrar_previa": mostrar_previa,
+    })
 
 def nova_inspecao(request):
     if request.method == "POST":

@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório de Inspeções{% endblock %}
+
+{% block page_actions %}
+<div class="page-actions">
+    <a href="{% url 'listar_inspecoes' %}" class="btn btn-secondary">Voltar ao histórico</a>
+    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+    .filtros-card {
+        margin-bottom: 20px;
+    }
+
+    .filtros-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(180px, 1fr));
+        gap: 16px;
+        align-items: end;
+    }
+
+    .filtros-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .resumo-relatorio {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+
+    .badge-total {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: #ede9fe;
+        color: #7c3aed;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .badge-criticidade {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .badge-baixa {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-media {
+        background: #fef9c3;
+        color: #854d0e;
+    }
+
+    .badge-alta {
+        background: #ffedd5;
+        color: #9a3412;
+    }
+
+    .badge-critica {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .table-wrapper table {
+        min-width: 1100px;
+    }
+
+    @media (max-width: 1000px) {
+        .filtros-grid {
+            grid-template-columns: repeat(2, minmax(180px, 1fr));
+        }
+    }
+
+    @media (max-width: 700px) {
+        .filtros-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Relatório de Inspeções</h1>
+        <p class="page-subtitle">
+            Selecione os filtros desejados e gere o relatório em Excel.
+        </p>
+    </div>
+</div>
+
+<div class="card filtros-card">
+    <div class="card-header">Filtros do relatório</div>
+    <div class="card-body">
+        <form method="get" action="{% url 'relatorio_inspecoes' %}">
+            <div class="filtros-grid">
+                <div class="field">
+                    <label for="id_data_ini">Data inicial</label>
+                    <input 
+                        type="date" 
+                        name="data_ini" 
+                        id="id_data_ini" 
+                        class="form-control" 
+                        value="{{ filtros.data_ini }}"
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="id_data_fim">Data final</label>
+                    <input 
+                        type="date" 
+                        name="data_fim" 
+                        id="id_data_fim" 
+                        class="form-control" 
+                        value="{{ filtros.data_fim }}"
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="id_via">Via</label>
+                    <select name="via" id="id_via" class="form-control">
+                        <option value="">Todas</option>
+                        {% for valor, texto in via_choices %}
+                            <option value="{{ valor }}" {% if valor == filtros.via %}selected{% endif %}>
+                                {{ texto }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="id_trilho">Trilho</label>
+                    <select name="trilho" id="id_trilho" class="form-control">
+                        <option value="">Todos</option>
+                        {% for valor, texto in trilho_choices %}
+                            <option value="{{ valor }}" {% if valor == filtros.trilho %}selected{% endif %}>
+                                {{ texto }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="id_item">Item da ocorrência</label>
+                    <select name="item" id="id_item" class="form-control">
+                        <option value="">Todos</option>
+                        {% for item in itens %}
+                            <option value="{{ item.id }}" {% if item.id|stringformat:"s" == filtros.item %}selected{% endif %}>
+                                {{ item.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="id_criticidade">Criticidade</label>
+                    <select name="criticidade" id="id_criticidade" class="form-control">
+                        <option value="">Todas</option>
+                        {% for valor, texto in criticidade_choices %}
+                            <option value="{{ valor }}" {% if valor == filtros.criticidade %}selected{% endif %}>
+                                {{ texto }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <div class="filtros-actions">
+                        <button type="submit" class="btn btn-primary">
+                            Visualizar filtros
+                        </button>
+
+                        <button 
+                            type="submit" 
+                            class="btn btn-success"
+                            formaction="{% url 'exportar_excel_inspecoes' %}"
+                            formmethod="get"
+                        >
+                            Gerar Excel
+                        </button>
+
+                        <a href="{% url 'relatorio_inspecoes' %}" class="btn btn-secondary">
+                            Limpar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="resumo-relatorio">
+    <h2>Prévia do relatório</h2>
+    <span class="badge-total">
+        {{ ocorrencias|length }} ocorrência{% if ocorrencias|length != 1 %}s{% endif %}
+    </span>
+</div>
+
+{% if ocorrencias %}
+<div class="card">
+    <div class="card-header">Registros encontrados</div>
+    <div class="card-body">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Início</th>
+                        <th>Fim</th>
+                        <th>Setor</th>
+                        <th>Via</th>
+                        <th>Trilho</th>
+                        <th>MT problema</th>
+                        <th>Item</th>
+                        <th>Criticidade</th>
+                        <th>Responsável</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ocorrencia in ocorrencias %}
+                    <tr>
+                        <td>{{ ocorrencia.inspecao.data_inspecao|date:"d/m/Y" }}</td>
+                        <td>{{ ocorrencia.inspecao.hora_inspecao|time:"H:i" }}</td>
+                        <td>
+                            {% if ocorrencia.inspecao.hora_fim_inspecao %}
+                                {{ ocorrencia.inspecao.hora_fim_inspecao|time:"H:i" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ ocorrencia.inspecao.setor.nome }}</td>
+                        <td>{{ ocorrencia.inspecao.get_via_display }}</td>
+                        <td>{{ ocorrencia.get_trilho_display }}</td>
+                        <td>{{ ocorrencia.mt_problema|default:"-" }}</td>
+                        <td>{{ ocorrencia.item.nome }}</td>
+                        <td>
+                            <span class="badge-criticidade badge-{{ ocorrencia.criticidade }}">
+                                {{ ocorrencia.get_criticidade_display }}
+                            </span>
+                        </td>
+                        <td>{{ ocorrencia.inspecao.responsavel }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    Nenhuma ocorrência encontrada para os filtros selecionados.
+</div>
+{% endif %}
+{% endblock %}

@@ -30,4 +30,6 @@ urlpatterns = [
     path("api/itens-inspecao/", views.api_itens_inspecao, name="api_itens_inspecao"),
     
     path("inspecoes/exportar-excel/", views.exportar_excel_inspecoes, name="exportar_excel_inspecoes"),
+    
+    path("relatorios/inspecoes/", views.relatorio_inspecoes, name="relatorio_inspecoes"),
 ]

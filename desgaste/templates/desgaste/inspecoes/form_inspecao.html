@@ -3,9 +3,26 @@
 {% block title %}{{ titulo }}{% endblock %}
 
 {% block page_actions %}
-<div class="page-actions">
+<style>
+    .page-actions-direita {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    @media (max-width: 700px) {
+        .page-actions-direita {
+            justify-content: flex-start;
+        }
+    }
+</style>
+
+<div class="page-actions page-actions-direita">
     <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
     <a href="{% url 'listar_inspecoes' %}" class="btn btn-primary">Histórico de cadastros</a>
+    <a href="{% url 'relatorio_inspecoes' %}" class="btn btn-success">Relatórios Excel</a>
 </div>
 {% endblock %}
 
@@ -197,7 +214,7 @@
                                 <div class="field">
                                     <label>&nbsp;</label>
                                     <button type="button" class="btn-concluir-ocorrencia" onclick="concluirEAdicionarOcorrencia(this)">
-                                        Próxima ocorrência
+                                        Próxima
                                     </button>
                                 </div>
                             </div>
@@ -238,6 +255,8 @@
 
 {% block page_scripts %}
 <script>
+let ITENS_INSPECAO = [];
+
 function obterTrilhosPermitidosPorVia() {
     const viaSelect = document.getElementById("id_via");
     const via = viaSelect ? String(viaSelect.value || "").trim() : "";
@@ -273,6 +292,56 @@ function atualizarTrilhosDasOcorrencias() {
     });
 }
 
+async function carregarItensInspecao() {
+    try {
+        const resposta = await fetch("{% url 'api_itens_inspecao' %}?t=" + Date.now(), {
+            cache: "no-store"
+        });
+
+        const dados = await resposta.json();
+        ITENS_INSPECAO = dados.itens || [];
+
+        atualizarSelectsDeItens();
+    } catch (erro) {
+        console.error("Erro ao carregar itens de inspeção:", erro);
+    }
+}
+
+function preencherSelectItem(select, valorSelecionado = "") {
+    if (!select) {
+        return;
+    }
+
+    const valorAtual = valorSelecionado || select.value || "";
+
+    select.innerHTML = "";
+
+    const optionVazia = document.createElement("option");
+    optionVazia.value = "";
+    optionVazia.textContent = "---------";
+    select.appendChild(optionVazia);
+
+    ITENS_INSPECAO.forEach(function (item) {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.textContent = item.nome;
+
+        if (String(item.id) === String(valorAtual)) {
+            option.selected = true;
+        }
+
+        select.appendChild(option);
+    });
+}
+
+function atualizarSelectsDeItens() {
+    const selects = document.querySelectorAll('select[name$="-item"]');
+
+    selects.forEach(function (select) {
+        preencherSelectItem(select, select.value);
+    });
+}
+
 function adicionarFormulario() {
     const prefix = "{{ formset.prefix }}";
     const totalForms = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
@@ -287,6 +356,8 @@ function adicionarFormulario() {
     const emptyForm = `
         <div class="card ocorrencia-card">
             <div class="card-body">
+                <input type="checkbox" name="${prefix}-${formCount}-DELETE" id="id_${prefix}-${formCount}-DELETE" style="display:none;">
+
                 <div class="ocorrencia-linha">
                     <div class="field">
                         <label for="id_${prefix}-${formCount}-trilho">Trilho</label>
@@ -305,9 +376,7 @@ function adicionarFormulario() {
                     <div class="field">
                         <label for="id_${prefix}-${formCount}-item">Item</label>
                         <select name="${prefix}-${formCount}-item" id="id_${prefix}-${formCount}-item" class="form-control">
-                            {% for item in formset.empty_form.fields.item.queryset %}
-                                <option value="{{ item.id }}">{{ item.nome|escapejs }}</option>
-                            {% endfor %}
+                            <option value="">Carregando itens...</option>
                         </select>
                     </div>
 
@@ -329,7 +398,7 @@ function adicionarFormulario() {
                     <div class="field">
                         <label>&nbsp;</label>
                         <button type="button" class="btn-concluir-ocorrencia" onclick="concluirEAdicionarOcorrencia(this)">
-                            Próxima ocorrência
+                            Próxima
                         </button>
                     </div>
                 </div>
@@ -341,6 +410,9 @@ function adicionarFormulario() {
     totalForms.value = formCount + 1;
 
     atualizarTrilhosDasOcorrencias();
+
+    const novoSelectItem = document.getElementById(`id_${prefix}-${formCount}-item`);
+    preencherSelectItem(novoSelectItem);
 
     const cards = document.querySelectorAll(".ocorrencia-card");
     return cards[cards.length - 1];
@@ -371,6 +443,29 @@ function concluirEAdicionarOcorrencia(botao) {
     }
 }
 
+function marcarOcorrenciasVaziasParaIgnorar() {
+    const cards = document.querySelectorAll(".ocorrencia-card");
+
+    cards.forEach(function (card) {
+        const trilho = card.querySelector('select[name$="-trilho"]');
+        const mt = card.querySelector('input[name$="-mt_problema"]');
+        const item = card.querySelector('select[name$="-item"]');
+        const foto = card.querySelector('input[type="file"]');
+        const deleteInput = card.querySelector('input[name$="-DELETE"]');
+
+        const trilhoVazio = !trilho || !String(trilho.value || "").trim();
+        const mtVazio = !mt || !String(mt.value || "").trim();
+        const itemVazio = !item || !String(item.value || "").trim();
+        const fotoVazia = !foto || !foto.files || foto.files.length === 0;
+
+        const ocorrenciaVazia = trilhoVazio && mtVazio && itemVazio && fotoVazia;
+
+        if (ocorrenciaVazia && deleteInput) {
+            deleteInput.checked = true;
+        }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     const viaSelect = document.getElementById("id_via");
 
@@ -379,6 +474,15 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     atualizarTrilhosDasOcorrencias();
+    carregarItensInspecao();
+
+    const formulario = document.querySelector("form");
+
+    if (formulario) {
+        formulario.addEventListener("submit", function () {
+            marcarOcorrenciasVaziasParaIgnorar();
+        });
+    }
 });
 </script>
 {% endblock %}
