@@ -2,6 +2,8 @@ import re
 
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.cache import never_cache
 
 from .forms import (
     RegistroInspecaoForm,
@@ -18,6 +20,7 @@ from .models import (
     PontoOperacional,
     TrocaTrilho,
     OcorrenciaInspecaoTrecho,
+    ItemInspecao,
 )
 
 MT_TRECHO_INICIAL = 1
@@ -528,3 +531,16 @@ def mapa_trocas_trilho(request):
     }
 
     return render(request, "desgaste/trocas_trilho/mapa_trocas.html", context)
+
+@never_cache
+def api_itens_inspecao(request):
+    itens = (
+        ItemInspecao.objects
+        .filter(ativo=True)
+        .order_by("nome")
+        .values("id", "nome")
+    )
+
+    return JsonResponse({
+        "itens": list(itens)
+    })

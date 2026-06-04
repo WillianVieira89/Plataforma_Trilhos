@@ -26,4 +26,6 @@ urlpatterns = [
     path("trocas-trilho/mapa/", views.mapa_trocas_trilho, name="mapa_trocas_trilho"),
     path("trocas-trilho/nova/", views.nova_troca_trilho, name="nova_troca_trilho"),
     path("trocas-trilho/<int:pk>/editar/", views.editar_troca_trilho, name="editar_troca_trilho"),
+    
+    path("api/itens-inspecao/", views.api_itens_inspecao, name="api_itens_inspecao"),
 ]
