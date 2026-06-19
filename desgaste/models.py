@@ -288,8 +288,8 @@ class TipoSetor(models.TextChoices):
 
 
 class ViaChoices(models.TextChoices):
-    VIA_01 = "VIA_01", "Via 01"
-    VIA_02 = "VIA_02", "Via 02"
+    VIA_01 = "1", "Via 01"
+    VIA_02 = "2", "Via 02"
 
 
 class TrilhoChoices(models.TextChoices):
@@ -356,7 +356,7 @@ class InspecaoTrecho(models.Model):
     )
 
     via = models.CharField(
-        max_length=10,
+        max_length=1,
         choices=ViaChoices.choices,
         blank=True,
     )

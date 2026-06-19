@@ -532,13 +532,13 @@ def mapa_trocas_trilho(request):
         via = str(item.get("via", "")).strip()
         trilho = str(item.get("trilho_codigo", "")).strip().upper()
 
-        if via in ["1", "01"]:
+        if via == "1":
             if trilho == "A":
                 via_1_a.append(bloco)
             elif trilho == "B":
                 via_1_b.append(bloco)
 
-        elif via in ["2", "02"]:
+        elif via == "2":
             if trilho == "C":
                 via_2_c.append(bloco)
             elif trilho == "D":

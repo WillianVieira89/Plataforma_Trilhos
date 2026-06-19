@@ -261,11 +261,11 @@ function obterTrilhosPermitidosPorVia() {
     const viaSelect = document.getElementById("id_via");
     const via = viaSelect ? String(viaSelect.value || "").trim() : "";
 
-    if (via === "VIA_01" || via === "1" || via === "01") {
+    if (via === "1") {
         return ["", "A", "B"];
     }
 
-    if (via === "VIA_02" || via === "2" || via === "02") {
+    if (via === "2") {
         return ["", "C", "D"];
     }
 

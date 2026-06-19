@@ -586,13 +586,13 @@ class TrocaTrilhoForm(forms.ModelForm):
         hora_inicio = cleaned_data.get("hora_inicio_troca")
         hora_fim = cleaned_data.get("hora_fim_troca")
 
-        if via in ["1", "01"] and trilho and trilho not in ["A", "B"]:
+        if via == "1" and trilho and trilho not in ["A", "B"]:
             self.add_error(
                 "trilho",
                 "Para a Via 01, selecione apenas Trilho A ou Trilho B.",
             )
 
-        if via in ["2", "02"] and trilho and trilho not in ["C", "D"]:
+        if via == "2" and trilho and trilho not in ["C", "D"]:
             self.add_error(
                 "trilho",
                 "Para a Via 02, selecione apenas Trilho C ou Trilho D.",

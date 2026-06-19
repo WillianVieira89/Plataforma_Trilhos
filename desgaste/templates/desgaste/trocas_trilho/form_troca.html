@@ -392,19 +392,15 @@ document.addEventListener('DOMContentLoaded', function () {
             selected: option.selected
         }));
 
-        function normalizarVia(valor) {
-            return String(valor || '').replace(/\D/g, '');
-        }
-
         function atualizarOpcoesTrilho() {
-            const via = normalizarVia(viaSelect.value);
+            const via = viaSelect.value;
             const valorAtual = trilhoSelect.value;
 
             let permitidos = [];
 
-            if (via === '1' || via === '01') {
+            if (via === '1') {
                 permitidos = ['', 'A', 'B'];
-            } else if (via === '2' || via === '02') {
+            } else if (via === '2') {
                 permitidos = ['', 'C', 'D'];
             } else {
                 permitidos = [''];
