@@ -2,6 +2,7 @@ from django import forms
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
 
+from .constants import ESTACOES_CHOICES
 from .utils import extrair_numero_mt
 from .models import (
     PontoOperacional,
@@ -20,26 +21,6 @@ from .models import (
 )
 
 
-ESTACOES_CHOICES_PADRAO = [
-    ("", "---------"),
-    ("CPR", "CPR - Capão Redondo"),
-    ("CPL", "CPL - Campo Limpo"),
-    ("VBE", "VBE - Vila das Belezas"),
-    ("GGR", "GGR - Giovanni Gronchi"),
-    ("STA", "STA - Santo Amaro"),
-    ("LTR", "LTR - Largo Treze"),
-    ("APN", "APN - Adolfo Pinheiro"),
-    ("ABV", "ABV - Alto da Boa Vista"),
-    ("BGA", "BGA - Borba Gato"),
-    ("BRK", "BRK - Brooklin"),
-    ("CPB", "CPB - Campo Belo"),
-    ("ECT", "ECT - Eucaliptos"),
-    ("MOE", "MOE - Moema"),
-    ("SER", "SER - AACD Servidor"),
-    ("HSP", "HSP - Hospital São Paulo"),
-    ("SCZ", "SCZ - Santa Cruz"),
-    ("CKB", "CKB - Chácara Klabin"),
-]
 
 
 class RegistroInspecaoForm(forms.Form):
@@ -366,7 +347,7 @@ OcorrenciaInspecaoTrechoFormSet = OcorrenciaInspecaoFormSet
 
 class TrocaTrilhoForm(forms.ModelForm):
     estacao_referencia = forms.ChoiceField(
-        choices=ESTACOES_CHOICES_PADRAO,
+        choices=ESTACOES_CHOICES,
         required=False,
         label="Estação referência",
         widget=forms.Select(attrs={"class": "form-control"}),
@@ -548,10 +529,10 @@ class TrocaTrilhoForm(forms.ModelForm):
             if len(choices) > 1:
                 self.fields["estacao_referencia"].choices = choices
             else:
-                self.fields["estacao_referencia"].choices = ESTACOES_CHOICES_PADRAO
+                self.fields["estacao_referencia"].choices = ESTACOES_CHOICES
 
         except Exception:
-            self.fields["estacao_referencia"].choices = ESTACOES_CHOICES_PADRAO
+            self.fields["estacao_referencia"].choices = ESTACOES_CHOICES
 
     def clean(self):
         cleaned_data = super().clean()

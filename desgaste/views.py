@@ -4,6 +4,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import never_cache
 from .relatorios import gerar_excel_ocorrencias_inspecao
 
+from .constants import ESTACOES_MAPA
 from .utils import extrair_numero_mt
 from .forms import (
     RegistroInspecaoForm,
@@ -30,58 +31,6 @@ MT_TRECHO_INICIAL = 1
 MT_TRECHO_FINAL = 10099
 PASSO_MT = 2
 
-ESTACOES_MAPA = [
-    {"sigla": "CPR", "nome": "Capão Redondo", "via": "1", "mt_inicial": 295, "mt_final": 363},
-    {"sigla": "CPR", "nome": "Capão Redondo", "via": "2", "mt_inicial": 270, "mt_final": 338},
-
-    {"sigla": "CPL", "nome": "Campo Limpo", "via": "1", "mt_inicial": 907, "mt_final": 975},
-    {"sigla": "CPL", "nome": "Campo Limpo", "via": "2", "mt_inicial": 920, "mt_final": 988},
-
-    {"sigla": "VBE", "nome": "Vila das Belezas", "via": "1", "mt_inicial": 1815, "mt_final": 1883},
-    {"sigla": "VBE", "nome": "Vila das Belezas", "via": "2", "mt_inicial": 1830, "mt_final": 1898},
-
-    {"sigla": "GGR", "nome": "Giovanni Gronchi", "via": "1", "mt_inicial": 2633, "mt_final": 2701},
-    {"sigla": "GGR", "nome": "Giovanni Gronchi", "via": "2", "mt_inicial": 2646, "mt_final": 2714},
-
-    {"sigla": "STA", "nome": "Santo Amaro", "via": "1", "mt_inicial": 3705, "mt_final": 3801},
-    {"sigla": "STA", "nome": "Santo Amaro", "via": "2", "mt_inicial": 3704, "mt_final": 3802},
-
-    {"sigla": "LTR", "nome": "Largo Treze", "via": "1", "mt_inicial": 4253, "mt_final": 4321},
-    {"sigla": "LTR", "nome": "Largo Treze", "via": "2", "mt_inicial": 4256, "mt_final": 4324},
-
-    {"sigla": "APN", "nome": "Adolfo Pinheiro", "via": "1", "mt_inicial": 4701, "mt_final": 4769},
-    {"sigla": "APN", "nome": "Adolfo Pinheiro", "via": "2", "mt_inicial": 4706, "mt_final": 4774},
-
-    {"sigla": "ABV", "nome": "Alto da Boa Vista", "via": "1", "mt_inicial": 5173, "mt_final": 5243},
-    {"sigla": "ABV", "nome": "Alto da Boa Vista", "via": "2", "mt_inicial": 5178, "mt_final": 5248},
-
-    {"sigla": "BGA", "nome": "Borba Gato", "via": "1", "mt_inicial": 5739, "mt_final": 5807},
-    {"sigla": "BGA", "nome": "Borba Gato", "via": "2", "mt_inicial": 5744, "mt_final": 5812},
-
-    {"sigla": "BRK", "nome": "Brooklin", "via": "1", "mt_inicial": 6179, "mt_final": 6247},
-    {"sigla": "BRK", "nome": "Brooklin", "via": "2", "mt_inicial": 6184, "mt_final": 6252},
-
-    {"sigla": "CPB", "nome": "Campo Belo", "via": "1", "mt_inicial": 6733, "mt_final": 6801},
-    {"sigla": "CPB", "nome": "Campo Belo", "via": "2", "mt_inicial": 6740, "mt_final": 6808},
-
-    {"sigla": "ECT", "nome": "Eucaliptos", "via": "1", "mt_inicial": 7573, "mt_final": 7641},
-    {"sigla": "ECT", "nome": "Eucaliptos", "via": "2", "mt_inicial": 7574, "mt_final": 7642},
-
-    {"sigla": "MOE", "nome": "Moema", "via": "1", "mt_inicial": 8061, "mt_final": 8129},
-    {"sigla": "MOE", "nome": "Moema", "via": "2", "mt_inicial": 8062, "mt_final": 8130},
-
-    {"sigla": "SER", "nome": "AACD Servidor", "via": "1", "mt_inicial": 8669, "mt_final": 8739},
-    {"sigla": "SER", "nome": "AACD Servidor", "via": "2", "mt_inicial": 8668, "mt_final": 8738},
-
-    {"sigla": "HSP", "nome": "Hospital São Paulo", "via": "1", "mt_inicial": 8997, "mt_final": 9067},
-    {"sigla": "HSP", "nome": "Hospital São Paulo", "via": "2", "mt_inicial": 8998, "mt_final": 9068},
-
-    {"sigla": "SCZ", "nome": "Santa Cruz", "via": "1", "mt_inicial": 9399, "mt_final": 9467},
-    {"sigla": "SCZ", "nome": "Santa Cruz", "via": "2", "mt_inicial": 9398, "mt_final": 9466},
-
-    {"sigla": "CKB", "nome": "Chácara Klabin", "via": "1", "mt_inicial": 9873, "mt_final": 9941},
-    {"sigla": "CKB", "nome": "Chácara Klabin", "via": "2", "mt_inicial": 9874, "mt_final": 9942},
-]
 
 def valor_campo(obj, nome_campo, default=""):
     return getattr(obj, nome_campo, default)
