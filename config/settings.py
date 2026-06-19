@@ -55,6 +55,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -140,6 +141,12 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # Campo automático padrão
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Autenticação
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "tela_inicial"
+LOGOUT_REDIRECT_URL = "login"
 
 
 # Configurações adicionais para produção
