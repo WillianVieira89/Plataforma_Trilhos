@@ -1,10 +1,10 @@
-import re
 from decimal import Decimal
 
 from django import forms
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
 
+from .utils import extrair_numero_mt
 from .models import (
     PontoOperacional,
     Trilho,
@@ -525,18 +525,6 @@ class TrocaTrilhoForm(forms.ModelForm):
             "imagem": forms.ClearableFileInput(attrs={"class": "form-control"}),
         }
 
-    def extrair_numero_mt_form(self, valor):
-        if valor is None:
-            return None
-
-        texto = str(valor).strip()
-        numeros = re.findall(r"\d+", texto)
-
-        if not numeros:
-            return None
-
-        return int("".join(numeros))
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -607,8 +595,8 @@ class TrocaTrilhoForm(forms.ModelForm):
         mt_inicial = cleaned_data.get("mt_inicial")
         mt_final = cleaned_data.get("mt_final")
 
-        mt_ini_num = self.extrair_numero_mt_form(mt_inicial)
-        mt_fim_num = self.extrair_numero_mt_form(mt_final)
+        mt_ini_num = extrair_numero_mt(mt_inicial)
+        mt_fim_num = extrair_numero_mt(mt_final)
 
         if mt_ini_num is not None and mt_fim_num is not None:
             diferenca_mt = abs(mt_fim_num - mt_ini_num)

@@ -1,11 +1,10 @@
-import re
-
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import never_cache
 from .relatorios import gerar_excel_ocorrencias_inspecao
 
+from .utils import extrair_numero_mt
 from .forms import (
     RegistroInspecaoForm,
     InspecaoForm,
@@ -83,18 +82,6 @@ ESTACOES_MAPA = [
     {"sigla": "CKB", "nome": "Chácara Klabin", "via": "1", "mt_inicial": 9873, "mt_final": 9941},
     {"sigla": "CKB", "nome": "Chácara Klabin", "via": "2", "mt_inicial": 9874, "mt_final": 9942},
 ]
-
-def extrair_numero_mt(valor):
-    if valor is None:
-        return None
-
-    texto = str(valor).strip()
-    numeros = re.findall(r"\d+", texto)
-
-    if not numeros:
-        return None
-
-    return int("".join(numeros))
 
 def valor_campo(obj, nome_campo, default=""):
     return getattr(obj, nome_campo, default)

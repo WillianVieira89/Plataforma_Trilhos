@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 
+from .utils import extrair_numero_mt
+
 class Linha(models.Model):
     nome = models.CharField(max_length=100, unique=True)
 
@@ -631,21 +633,6 @@ class TrocaTrilho(models.Model):
     def __str__(self):
         return f"{self.data_troca} - Via {self.via} - Trilho {self.trilho}"
 
-    @staticmethod
-    def extrair_numero_mt(valor):
-        import re
-
-        if valor is None:
-            return None
-
-        texto = str(valor).strip()
-        numeros = re.findall(r"\d+", texto)
-
-        if not numeros:
-            return None
-
-        return int("".join(numeros))
-
     def clean(self):
         errors = {}
 
@@ -675,8 +662,8 @@ class TrocaTrilho(models.Model):
         if not self.hora_troca and self.hora_inicio_troca:
             self.hora_troca = self.hora_inicio_troca
 
-        mt_ini_num = self.extrair_numero_mt(self.mt_inicial)
-        mt_fim_num = self.extrair_numero_mt(self.mt_final)
+        mt_ini_num = extrair_numero_mt(self.mt_inicial)
+        mt_fim_num = extrair_numero_mt(self.mt_final)
 
         if mt_ini_num is not None and mt_fim_num is not None:
             self.tamanho_trilho_m = abs(mt_fim_num - mt_ini_num) * 2
