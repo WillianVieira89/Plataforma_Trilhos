@@ -1,10 +1,9 @@
-import re
-from decimal import Decimal
-
 from django import forms
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
 
+from .constants import ESTACOES_CHOICES
+from .utils import extrair_numero_mt
 from .models import (
     PontoOperacional,
     Trilho,
@@ -22,26 +21,6 @@ from .models import (
 )
 
 
-ESTACOES_CHOICES_PADRAO = [
-    ("", "---------"),
-    ("CPR", "CPR - Capão Redondo"),
-    ("CPL", "CPL - Campo Limpo"),
-    ("VBE", "VBE - Vila das Belezas"),
-    ("GGR", "GGR - Giovanni Gronchi"),
-    ("STA", "STA - Santo Amaro"),
-    ("LTR", "LTR - Largo Treze"),
-    ("APN", "APN - Adolfo Pinheiro"),
-    ("ABV", "ABV - Alto da Boa Vista"),
-    ("BGA", "BGA - Borba Gato"),
-    ("BRK", "BRK - Brooklin"),
-    ("CPB", "CPB - Campo Belo"),
-    ("ECT", "ECT - Eucaliptos"),
-    ("MOE", "MOE - Moema"),
-    ("SER", "SER - AACD Servidor"),
-    ("HSP", "HSP - Hospital São Paulo"),
-    ("SCZ", "SCZ - Santa Cruz"),
-    ("CKB", "CKB - Chácara Klabin"),
-]
 
 
 class RegistroInspecaoForm(forms.Form):
@@ -368,7 +347,7 @@ OcorrenciaInspecaoTrechoFormSet = OcorrenciaInspecaoFormSet
 
 class TrocaTrilhoForm(forms.ModelForm):
     estacao_referencia = forms.ChoiceField(
-        choices=ESTACOES_CHOICES_PADRAO,
+        choices=ESTACOES_CHOICES,
         required=False,
         label="Estação referência",
         widget=forms.Select(attrs={"class": "form-control"}),
@@ -386,7 +365,6 @@ class TrocaTrilhoForm(forms.ModelForm):
             "referencia_local",
             "mt_inicial",
             "mt_final",
-            "tamanho_trilho_m",
             "medida_folga_mm",
             "solda_fechamento",
             "trilho_transicao",
@@ -455,14 +433,6 @@ class TrocaTrilhoForm(forms.ModelForm):
                     "placeholder": "Ex.: MT-145",
                 }
             ),
-            "tamanho_trilho_m": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "step": "0.01",
-                    "placeholder": "Calculado automaticamente",
-                    "readonly": "readonly",
-                }
-            ),
             "medida_folga_mm": forms.NumberInput(
                 attrs={
                     "class": "form-control",
@@ -525,18 +495,6 @@ class TrocaTrilhoForm(forms.ModelForm):
             "imagem": forms.ClearableFileInput(attrs={"class": "form-control"}),
         }
 
-    def extrair_numero_mt_form(self, valor):
-        if valor is None:
-            return None
-
-        texto = str(valor).strip()
-        numeros = re.findall(r"\d+", texto)
-
-        if not numeros:
-            return None
-
-        return int("".join(numeros))
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -557,8 +515,6 @@ class TrocaTrilhoForm(forms.ModelForm):
         self.fields["mt_inicial"].required = True
         self.fields["mt_final"].required = True
 
-        self.fields["tamanho_trilho_m"].required = False
-
         self.fields["responsavel"].required = True
         self.fields["tempo_aquecimento_seg"].label = "Tempo de aquecimento (min)"
         self.fields["motivo_troca"].label = "Motivo da troca"
@@ -573,10 +529,10 @@ class TrocaTrilhoForm(forms.ModelForm):
             if len(choices) > 1:
                 self.fields["estacao_referencia"].choices = choices
             else:
-                self.fields["estacao_referencia"].choices = ESTACOES_CHOICES_PADRAO
+                self.fields["estacao_referencia"].choices = ESTACOES_CHOICES
 
         except Exception:
-            self.fields["estacao_referencia"].choices = ESTACOES_CHOICES_PADRAO
+            self.fields["estacao_referencia"].choices = ESTACOES_CHOICES
 
     def clean(self):
         cleaned_data = super().clean()
@@ -586,13 +542,13 @@ class TrocaTrilhoForm(forms.ModelForm):
         hora_inicio = cleaned_data.get("hora_inicio_troca")
         hora_fim = cleaned_data.get("hora_fim_troca")
 
-        if via in ["1", "01"] and trilho and trilho not in ["A", "B"]:
+        if via == "1" and trilho and trilho not in ["A", "B"]:
             self.add_error(
                 "trilho",
                 "Para a Via 01, selecione apenas Trilho A ou Trilho B.",
             )
 
-        if via in ["2", "02"] and trilho and trilho not in ["C", "D"]:
+        if via == "2" and trilho and trilho not in ["C", "D"]:
             self.add_error(
                 "trilho",
                 "Para a Via 02, selecione apenas Trilho C ou Trilho D.",
@@ -604,22 +560,10 @@ class TrocaTrilhoForm(forms.ModelForm):
                 "A hora fim não pode ser menor que a hora início.",
             )
 
-        mt_inicial = cleaned_data.get("mt_inicial")
-        mt_final = cleaned_data.get("mt_final")
+        mt_ini_num = extrair_numero_mt(cleaned_data.get("mt_inicial"))
+        mt_fim_num = extrair_numero_mt(cleaned_data.get("mt_final"))
 
-        mt_ini_num = self.extrair_numero_mt_form(mt_inicial)
-        mt_fim_num = self.extrair_numero_mt_form(mt_final)
-
-        if mt_ini_num is not None and mt_fim_num is not None:
-            diferenca_mt = abs(mt_fim_num - mt_ini_num)
-            tamanho_calculado = diferenca_mt * 2
-
-            if tamanho_calculado <= 0:
-                self.add_error(
-                    "mt_final",
-                    "O MT final deve ser diferente do MT inicial.",
-                )
-            else:
-                cleaned_data["tamanho_trilho_m"] = Decimal(str(tamanho_calculado))
+        if mt_ini_num is not None and mt_fim_num is not None and mt_ini_num == mt_fim_num:
+            self.add_error("mt_final", "O MT final deve ser diferente do MT inicial.")
 
         return cleaned_data

@@ -58,7 +58,7 @@
         min-height: 44px;
         border: none;
         border-radius: 12px;
-        background: #8b5cf6;
+        background: var(--primary);
         color: #ffffff;
         font-weight: 800;
         cursor: pointer;
@@ -66,7 +66,7 @@
     }
 
     .btn-concluir-ocorrencia:hover {
-        background: #7c3aed;
+        background: var(--primary-dark);
     }
 
     .ocorrencia-card.ocorrencia-concluida {
@@ -261,11 +261,11 @@ function obterTrilhosPermitidosPorVia() {
     const viaSelect = document.getElementById("id_via");
     const via = viaSelect ? String(viaSelect.value || "").trim() : "";
 
-    if (via === "VIA_01" || via === "1" || via === "01") {
+    if (via === "1") {
         return ["", "A", "B"];
     }
 
-    if (via === "VIA_02" || via === "2" || via === "02") {
+    if (via === "2") {
         return ["", "C", "D"];
     }
 

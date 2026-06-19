@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Entrar — Plataforma Trilhos{% endblock %}
+
+{% block content %}
+<div class="login-page">
+    <div class="login-card">
+        <h1 class="login-title">Plataforma Trilhos</h1>
+        <p class="login-subtitle">Faça login para continuar</p>
+
+        {% if form.errors %}
+        <div class="login-error">Usuário ou senha inválidos. Tente novamente.</div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+
+            <div class="field-group">
+                <label for="id_username">Usuário</label>
+                <input
+                    type="text"
+                    id="id_username"
+                    name="username"
+                    autofocus
+                    autocomplete="username"
+                    required
+                >
+            </div>
+
+            <div class="field-group">
+                <label for="id_password">Senha</label>
+                <input
+                    type="password"
+                    id="id_password"
+                    name="password"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="btn-login">Entrar</button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .login-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(100vh - 80px);
+    }
+
+    .login-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 40px 36px;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .login-title {
+        margin: 0 0 6px;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--primary);
+        text-align: center;
+    }
+
+    .login-subtitle {
+        margin: 0 0 28px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        text-align: center;
+    }
+
+    .login-error {
+        background: #fde8e8;
+        border: 1px solid #f5c6c6;
+        border-radius: var(--radius-sm);
+        color: #b91c1c;
+        font-size: 0.875rem;
+        padding: 10px 14px;
+        margin-bottom: 20px;
+    }
+
+    .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 18px;
+    }
+
+    .field-group label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .field-group input {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 1rem;
+        padding: 10px 14px;
+        color: var(--text);
+        background: var(--surface-soft);
+        transition: border-color 0.2s;
+        outline: none;
+    }
+
+    .field-group input:focus {
+        border-color: var(--primary);
+        background: var(--surface);
+    }
+
+    .btn-login {
+        width: 100%;
+        margin-top: 8px;
+        padding: 12px;
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: var(--radius-sm);
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-login:hover {
+        background: var(--primary-dark);
+    }
+</style>
+{% endblock %}

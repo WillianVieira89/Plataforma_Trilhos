@@ -5,9 +5,9 @@
     --text: #2f2f35;
     --muted: #6b6b76;
 
-    --primary: #9b4df0;
-    --primary-dark: #8a3eea;
-    --primary-light: #b06cf3;
+    --primary: #5e22f3;
+    --primary-dark: #4a18c4;
+    --primary-light: #ede7fe;
 
     --secondary: #7a7f8a;
     --secondary-dark: #666b75;
@@ -208,7 +208,7 @@ button.btn-warning:hover {
     text-decoration: none;
     border-radius: 14px;
     padding: 18px 20px;
-    box-shadow: 0 6px 14px rgba(155, 77, 240, 0.22);
+    box-shadow: 0 6px 14px rgba(94, 34, 243, 0.22);
     transition: transform 0.2s ease, filter 0.2s ease;
 }
 
@@ -271,7 +271,7 @@ input:focus,
 select:focus,
 textarea:focus {
     border-color: var(--primary-light);
-    box-shadow: 0 0 0 3px rgba(155, 77, 240, 0.12);
+    box-shadow: 0 0 0 3px rgba(94, 34, 243, 0.12);
 }
 
 textarea {
