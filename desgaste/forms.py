@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from django import forms
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
@@ -386,7 +384,6 @@ class TrocaTrilhoForm(forms.ModelForm):
             "referencia_local",
             "mt_inicial",
             "mt_final",
-            "tamanho_trilho_m",
             "medida_folga_mm",
             "solda_fechamento",
             "trilho_transicao",
@@ -453,14 +450,6 @@ class TrocaTrilhoForm(forms.ModelForm):
                 attrs={
                     "class": "form-control",
                     "placeholder": "Ex.: MT-145",
-                }
-            ),
-            "tamanho_trilho_m": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "step": "0.01",
-                    "placeholder": "Calculado automaticamente",
-                    "readonly": "readonly",
                 }
             ),
             "medida_folga_mm": forms.NumberInput(
@@ -545,8 +534,6 @@ class TrocaTrilhoForm(forms.ModelForm):
         self.fields["mt_inicial"].required = True
         self.fields["mt_final"].required = True
 
-        self.fields["tamanho_trilho_m"].required = False
-
         self.fields["responsavel"].required = True
         self.fields["tempo_aquecimento_seg"].label = "Tempo de aquecimento (min)"
         self.fields["motivo_troca"].label = "Motivo da troca"
@@ -592,22 +579,10 @@ class TrocaTrilhoForm(forms.ModelForm):
                 "A hora fim não pode ser menor que a hora início.",
             )
 
-        mt_inicial = cleaned_data.get("mt_inicial")
-        mt_final = cleaned_data.get("mt_final")
+        mt_ini_num = extrair_numero_mt(cleaned_data.get("mt_inicial"))
+        mt_fim_num = extrair_numero_mt(cleaned_data.get("mt_final"))
 
-        mt_ini_num = extrair_numero_mt(mt_inicial)
-        mt_fim_num = extrair_numero_mt(mt_final)
-
-        if mt_ini_num is not None and mt_fim_num is not None:
-            diferenca_mt = abs(mt_fim_num - mt_ini_num)
-            tamanho_calculado = diferenca_mt * 2
-
-            if tamanho_calculado <= 0:
-                self.add_error(
-                    "mt_final",
-                    "O MT final deve ser diferente do MT inicial.",
-                )
-            else:
-                cleaned_data["tamanho_trilho_m"] = Decimal(str(tamanho_calculado))
+        if mt_ini_num is not None and mt_fim_num is not None and mt_ini_num == mt_fim_num:
+            self.add_error("mt_final", "O MT final deve ser diferente do MT inicial.")
 
         return cleaned_data

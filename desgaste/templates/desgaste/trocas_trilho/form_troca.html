@@ -110,9 +110,11 @@
                     </div>
 
                     <div class="field">
-                        {{ form.tamanho_trilho_m.label_tag }}
-                        {{ form.tamanho_trilho_m }}
-                        {{ form.tamanho_trilho_m.errors }}
+                        <label>Tamanho do trilho (m)</label>
+                        <input type="number" id="id_tamanho_trilho_m"
+                               class="form-control" step="0.01"
+                               placeholder="Calculado automaticamente"
+                               readonly tabindex="-1">
                     </div>
 
                     <div class="field">
@@ -437,8 +439,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /*
     =====================================================
-    CÁLCULO AUTOMÁTICO DO TAMANHO DO TRILHO
-    Tamanho = MT final - MT inicial
+    CÁLCULO AUTOMÁTICO DO TAMANHO DO TRILHO (prévia visual)
+    Tamanho = |MT final - MT inicial| × 2  (cada intervalo MT = 2 m)
+    Valor real é calculado e salvo pelo servidor.
     =====================================================
     */
     function extrairNumeroMT(valor) {
@@ -465,7 +468,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const tamanho = Math.abs(mtFinal - mtInicial);
+        const tamanho = Math.abs(mtFinal - mtInicial) * 2;
 
         if (tamanho <= 0) {
             tamanhoTrilhoInput.value = '';
