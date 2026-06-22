@@ -78,73 +78,150 @@ body {
     font-size: 1rem;
 }
 
-/* Botões */
+/* Botões — base (só classes, nunca a tag button solta) */
 .btn,
-button,
 a.btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 48px;
-    padding: 0 18px;
+    padding: 0 20px;
     border: none;
     border-radius: 12px;
     text-decoration: none;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
     box-shadow: none;
+    white-space: nowrap;
 }
 
 .btn:hover,
-button:hover,
 a.btn:hover {
     transform: translateY(-1px);
 }
 
-.btn-primary,
-button.btn-primary {
-    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+/* Primário — ação principal */
+.btn-primary {
+    background: var(--primary);
     color: #fff;
 }
 
-.btn-primary:hover,
-button.btn-primary:hover {
-    filter: brightness(0.98);
+.btn-primary:hover {
+    background: var(--primary-dark);
 }
 
-.btn-secondary,
-button.btn-secondary {
-    background: var(--secondary);
+/* Secundário — ações de apoio, contorno */
+.btn-secondary {
+    background: #fff;
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+}
+
+.btn-secondary:hover {
+    background: var(--primary-light);
+}
+
+/* Ghost — discreto (voltar, cancelar, logout) */
+.btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    box-shadow: none;
+}
+
+.btn-ghost:hover {
+    color: var(--text);
+    background: var(--surface-soft);
+    transform: none;
+}
+
+/* Danger — excluir */
+.btn-danger {
+    background: #dc2626;
     color: #fff;
 }
 
-.btn-secondary:hover,
-button.btn-secondary:hover {
-    background: var(--secondary-dark);
+.btn-danger:hover {
+    background: #b91c1c;
 }
 
-.btn-success,
-button.btn-success {
+/* Success — salvar/confirmar */
+.btn-success {
     background: #1fa463;
     color: #fff;
 }
 
-.btn-success:hover,
-button.btn-success:hover {
+.btn-success:hover {
     background: #188a53;
 }
 
-.btn-warning,
-button.btn-warning {
+/* Warning */
+.btn-warning {
     background: #f1c232;
     color: #232323;
 }
 
-.btn-warning:hover,
-button.btn-warning:hover {
+.btn-warning:hover {
     background: #dfb01b;
+}
+
+/* Variante compacta */
+.btn-sm {
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 13px;
+    border-radius: 8px;
+}
+
+/* Topbar */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 4px 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+}
+
+.topbar-brand {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.01em;
+}
+
+.topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.topbar-username {
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+/* Action bar — faixa de ações de página */
+.action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-height: 44px;
+    margin-bottom: 24px;
+}
+
+.action-bar-left,
+.action-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 /* Cards */
