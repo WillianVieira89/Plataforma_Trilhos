@@ -3,26 +3,14 @@
 {% block title %}{{ titulo }}{% endblock %}
 
 {% block page_actions %}
-<style>
-    .page-actions-direita {
-        width: 100%;
-        display: flex;
-        justify-content: flex-end;
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-
-    @media (max-width: 700px) {
-        .page-actions-direita {
-            justify-content: flex-start;
-        }
-    }
-</style>
-
-<div class="page-actions page-actions-direita">
-    <a href="{% url 'tela_inicial' %}" class="btn btn-ghost">Voltar ao início</a>
-    <a href="{% url 'listar_inspecoes' %}" class="btn btn-secondary">Histórico de cadastros</a>
-    <a href="{% url 'relatorio_inspecoes' %}" class="btn btn-success">Relatórios Excel</a>
+<div class="action-bar">
+    <div class="action-bar-left">
+        <a href="{% url 'tela_inicial' %}" class="btn btn-ghost">Início</a>
+    </div>
+    <div class="action-bar-right">
+        <a href="{% url 'listar_inspecoes' %}" class="btn btn-secondary">Histórico</a>
+        <a href="{% url 'relatorio_inspecoes' %}" class="btn btn-success">Relatórios</a>
+    </div>
 </div>
 {% endblock %}
 

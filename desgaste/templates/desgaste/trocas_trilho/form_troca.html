@@ -2,15 +2,21 @@
 
 {% block title %}{{ titulo }}{% endblock %}
 
-{% block content %}
-<div class="page-header page-header-com-acoes">
-    <div class="page-header-texto">
-        <h1 class="page-title">{{ titulo }}</h1>
-    </div>
-
-    <div class="page-actions-inline">
+{% block page_actions %}
+<div class="action-bar">
+    <div class="action-bar-left">
         <a href="{% url 'tela_inicial' %}" class="btn btn-ghost">Início</a>
+    </div>
+    <div class="action-bar-right">
         <a href="{% url 'mapa_trocas_trilho' %}" class="btn btn-primary">Mapa de Trocas</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ titulo }}</h1>
     </div>
 </div>
 
@@ -249,28 +255,6 @@
 </form>
 
 <style>
-    .page-header-com-acoes {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 20px;
-        margin-bottom: 24px;
-    }
-
-    .page-header-texto {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .page-actions-inline {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        align-items: center;
-        margin-top: 6px;
-    }
-
     .form-alert {
         margin-bottom: 16px;
     }
@@ -331,15 +315,6 @@
     }
 
     @media (max-width: 768px) {
-        .page-header-com-acoes {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .page-actions-inline {
-            justify-content: flex-start;
-        }
-
         .form-actions-bottom {
             justify-content: flex-start;
         }

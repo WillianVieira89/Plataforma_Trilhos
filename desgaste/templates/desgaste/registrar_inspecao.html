@@ -3,9 +3,13 @@
 {% block title %}Registrar Inspeção de Desgaste{% endblock %}
 
 {% block page_actions %}
-<div class="page-actions">
-    <a href="{% url 'tela_inicial' %}" class="btn btn-ghost">Voltar ao início</a>
-    <a href="{% url 'historico_inspecoes' %}" class="btn btn-secondary">Histórico de cadastros</a>
+<div class="action-bar">
+    <div class="action-bar-left">
+        <a href="{% url 'tela_inicial' %}" class="btn btn-ghost">Início</a>
+    </div>
+    <div class="action-bar-right">
+        <a href="{% url 'historico_inspecoes' %}" class="btn btn-secondary">Histórico</a>
+    </div>
 </div>
 {% endblock %}
 
