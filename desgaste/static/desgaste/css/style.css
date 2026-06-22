@@ -278,9 +278,9 @@ a.btn:hover {
 
 .hub-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
-    max-width: 930px;
+    max-width: 620px;
     margin: 0 auto;
 }
 
@@ -504,7 +504,4 @@ th {
         font-size: 1.7rem;
     }
 
-    .hub-grid {
-        max-width: 100%;
-    }
 }
