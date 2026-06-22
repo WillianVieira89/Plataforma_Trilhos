@@ -1,10 +1,13 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Entrar — Plataforma Trilhos{% endblock %}
 
 {% block content %}
 <div class="login-page">
     <div class="login-card">
+        <img src="{% static 'desgaste/img/logo.png' %}" alt="Logo" class="login-logo">
+
         <h1 class="login-title">Plataforma Trilhos</h1>
         <p class="login-subtitle">Faça login para continuar</p>
 
@@ -39,7 +42,7 @@
                 >
             </div>
 
-            <button type="submit" class="btn-login">Entrar</button>
+            <button type="submit" class="btn btn-primary">Entrar</button>
         </form>
     </div>
 </div>
@@ -50,6 +53,13 @@
         align-items: center;
         justify-content: center;
         min-height: calc(100vh - 80px);
+    }
+
+    .login-logo {
+        display: block;
+        max-width: 180px;
+        height: auto;
+        margin: 0 auto 24px;
     }
 
     .login-card {
@@ -116,22 +126,9 @@
         background: var(--surface);
     }
 
-    .btn-login {
+    .login-card button[type="submit"] {
         width: 100%;
         margin-top: 8px;
-        padding: 12px;
-        background: var(--primary);
-        color: #fff;
-        border: none;
-        border-radius: var(--radius-sm);
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-
-    .btn-login:hover {
-        background: var(--primary-dark);
     }
 </style>
 {% endblock %}

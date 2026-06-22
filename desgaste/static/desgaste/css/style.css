@@ -38,7 +38,7 @@ body {
 .app-shell {
     max-width: 1760px;
     min-height: calc(100vh - 12px);
-    margin: 6px;
+    margin: 6px auto;
     background: var(--surface);
     border-radius: 14px;
     box-shadow: var(--shadow-soft);
@@ -197,6 +197,12 @@ a.btn:hover {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.topbar-logo-img {
+    height: 36px;
+    width: auto;
+    display: block;
 }
 
 .topbar-username {
@@ -486,7 +492,7 @@ th {
 /* Responsivo */
 @media (max-width: 900px) {
     .app-shell {
-        margin: 10px;
+        margin: 10px auto;
         padding: 18px;
     }
 

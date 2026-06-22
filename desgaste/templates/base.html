@@ -12,7 +12,9 @@
 
         {% if user.is_authenticated %}
         <div class="topbar">
-            <div></div>
+            <div class="topbar-logo">
+                <img src="{% static 'desgaste/img/logo.png' %}" alt="Logo" class="topbar-logo-img">
+            </div>
             <div class="topbar-user">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                      viewBox="0 0 24 24" fill="none" stroke="var(--muted)"
