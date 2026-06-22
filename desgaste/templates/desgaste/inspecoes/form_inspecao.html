@@ -20,8 +20,8 @@
 </style>
 
 <div class="page-actions page-actions-direita">
-    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
-    <a href="{% url 'listar_inspecoes' %}" class="btn btn-primary">Histórico de cadastros</a>
+    <a href="{% url 'tela_inicial' %}" class="btn btn-ghost">Voltar ao início</a>
+    <a href="{% url 'listar_inspecoes' %}" class="btn btn-secondary">Histórico de cadastros</a>
     <a href="{% url 'relatorio_inspecoes' %}" class="btn btn-success">Relatórios Excel</a>
 </div>
 {% endblock %}
@@ -53,20 +53,8 @@
         min-height: 44px;
     }
 
-    .btn-concluir-ocorrencia {
+    .ocorrencia-linha .btn-primary {
         width: 100%;
-        min-height: 44px;
-        border: none;
-        border-radius: 12px;
-        background: var(--primary);
-        color: #ffffff;
-        font-weight: 800;
-        cursor: pointer;
-        padding: 10px 12px;
-    }
-
-    .btn-concluir-ocorrencia:hover {
-        background: var(--primary-dark);
     }
 
     .ocorrencia-card.ocorrencia-concluida {
@@ -213,7 +201,7 @@
 
                                 <div class="field">
                                     <label>&nbsp;</label>
-                                    <button type="button" class="btn-concluir-ocorrencia" onclick="concluirEAdicionarOcorrencia(this)">
+                                    <button type="button" class="btn btn-primary" onclick="concluirEAdicionarOcorrencia(this)">
                                         Próxima
                                     </button>
                                 </div>
@@ -248,7 +236,7 @@
 
     <div class="page-actions">
         <button type="submit" class="btn btn-success">Salvar inspeção</button>
-        <a href="{% url 'listar_inspecoes' %}" class="btn btn-secondary">Voltar</a>
+        <a href="{% url 'listar_inspecoes' %}" class="btn btn-ghost">Voltar</a>
     </div>
 </form>
 {% endblock %}
@@ -397,7 +385,7 @@ function adicionarFormulario() {
 
                     <div class="field">
                         <label>&nbsp;</label>
-                        <button type="button" class="btn-concluir-ocorrencia" onclick="concluirEAdicionarOcorrencia(this)">
+                        <button type="button" class="btn btn-primary" onclick="concluirEAdicionarOcorrencia(this)">
                             Próxima
                         </button>
                     </div>

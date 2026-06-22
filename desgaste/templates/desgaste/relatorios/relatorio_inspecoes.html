@@ -4,8 +4,8 @@
 
 {% block page_actions %}
 <div class="page-actions">
-    <a href="{% url 'listar_inspecoes' %}" class="btn btn-secondary">Voltar ao histórico</a>
-    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
+    <a href="{% url 'listar_inspecoes' %}" class="btn btn-ghost">Voltar ao histórico</a>
+    <a href="{% url 'tela_inicial' %}" class="btn btn-ghost">Voltar ao início</a>
 </div>
 {% endblock %}
 
@@ -196,7 +196,7 @@
                             Gerar Excel
                         </button>
 
-                        <a href="{% url 'relatorio_inspecoes' %}" class="btn btn-secondary">
+                        <a href="{% url 'relatorio_inspecoes' %}" class="btn btn-ghost">
                             Limpar
                         </a>
                     </div>

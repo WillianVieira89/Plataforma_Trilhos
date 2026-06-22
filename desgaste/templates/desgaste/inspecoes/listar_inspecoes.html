@@ -3,25 +3,8 @@
 {% block title %}Inspeções{% endblock %}
 
 {% block page_actions %}
-
-<style>
-    .page-actions-direita {
-        width: 100%;
-        display: flex;
-        justify-content: flex-end;
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-
-    @media (max-width: 700px) {
-        .page-actions-direita {
-            justify-content: flex-start;
-        }
-    }
-</style>
-
 <div class="page-actions">
-    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
+    <a href="{% url 'tela_inicial' %}" class="btn btn-ghost">Voltar ao início</a>
     <a href="{% url 'nova_inspecao' %}" class="btn btn-primary">Nova inspeção</a>
 </div>
 {% endblock %}
@@ -166,28 +149,6 @@
         flex-wrap: wrap;
     }
 
-    .btn-small {
-        padding: 8px 12px;
-        font-size: 14px;
-        border-radius: 10px;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-    }
-
-    .btn-danger {
-        background: #dc2626;
-        color: #ffffff;
-        border: none;
-    }
-
-    .btn-danger:hover {
-        background: #b91c1c;
-        color: #ffffff;
-    }
-
     .foto-link {
         font-weight: 700;
         color: var(--primary);
@@ -318,15 +279,15 @@
 
                                         <td>
                                             <div class="acoes-linha">
-                                                <a href="{% url 'editar_ocorrencia_inspecao' ocorrencia.id %}" class="btn btn-warning btn-small">
+                                                <a href="{% url 'editar_ocorrencia_inspecao' ocorrencia.id %}" class="btn btn-warning btn-sm">
                                                     Editar
                                                 </a>
 
-                                                <a href="{% url 'excluir_ocorrencia_inspecao' ocorrencia.id %}" class="btn btn-danger btn-small">
+                                                <a href="{% url 'excluir_ocorrencia_inspecao' ocorrencia.id %}" class="btn btn-danger btn-sm">
                                                     Excluir
                                                 </a>
 
-                                                <a href="{% url 'editar_inspecao' ocorrencia.inspecao.id %}" class="btn btn-secondary btn-small">
+                                                <a href="{% url 'editar_inspecao' ocorrencia.inspecao.id %}" class="btn btn-secondary btn-sm">
                                                     Editar inspeção
                                                 </a>
                                             </div>

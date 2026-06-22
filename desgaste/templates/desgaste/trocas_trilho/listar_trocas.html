@@ -4,7 +4,7 @@
 
 {% block page_actions %}
 <div class="page-actions">
-    <a href="{% url 'tela_inicial' %}" class="btn btn-secondary">Voltar ao início</a>
+    <a href="{% url 'tela_inicial' %}" class="btn btn-ghost">Voltar ao início</a>
     <a href="{% url 'nova_troca_trilho' %}" class="btn btn-primary">Novo cadastro</a>
 </div>
 {% endblock %}
@@ -14,9 +14,6 @@
     <div>
         <h1 class="page-title">Trocas de Trilho</h1>
         <p class="page-subtitle">Consulta e acompanhamento das trocas cadastradas no sistema.</p>
-    </div>
-    <div>
-        <a href="{% url 'nova_troca_trilho' %}" class="btn btn-primary">Nova troca</a>
     </div>
 </div>
 
