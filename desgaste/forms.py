@@ -607,6 +607,13 @@ class BaseAtuacaoLubrificadorForm(forms.ModelForm):
                     "min": "0",
                     "max": "100",
                     "step": "1",
+                    "inputmode": "numeric",
+                    "oninput": (
+                        "if (this.value !== '') {"
+                        "this.value = Math.min(100, "
+                        "Math.max(0, Number(this.value)));"
+                        "}"
+                    ),
                     "placeholder": "Ex.: 80",
                 }
             ),
