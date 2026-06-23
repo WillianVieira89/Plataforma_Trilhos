@@ -25,6 +25,8 @@ from .models import (
     ViaChoices,
     TrilhoChoices,
     CriticidadeChoices,
+    Lubrificador,
+    StatusLubrificadorChoices,
 )
 
 MT_TRECHO_INICIAL = 1
@@ -541,3 +543,30 @@ def api_itens_inspecao(request):
     return JsonResponse({
         "itens": list(itens)
     })
+
+
+def listar_lubrificadores(request):
+    lubrificadores = Lubrificador.objects.all().order_by("nome")
+
+    filtro_via    = request.GET.get("via", "")
+    filtro_status = request.GET.get("status", "")
+
+    if filtro_via:
+        lubrificadores = lubrificadores.filter(via=filtro_via)
+    if filtro_status:
+        lubrificadores = lubrificadores.filter(status_operacional=filtro_status)
+
+    return render(request, "desgaste/lubrificadores/listar_lubrificadores.html", {
+        "lubrificadores": lubrificadores,
+        "filtro_via": filtro_via,
+        "filtro_status": filtro_status,
+        "status_choices": StatusLubrificadorChoices.choices,
+    })
+
+
+def novo_lubrificador(request):
+    return HttpResponse("Em construção — Fase 2")
+
+
+def editar_lubrificador(request, pk):
+    return HttpResponse("Em construção — Fase 2")

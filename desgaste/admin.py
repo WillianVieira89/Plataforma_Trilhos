@@ -1,9 +1,9 @@
 from django.contrib import admin
 from .models import (
-    Linha, 
-    Estacao, 
-    PontoOperacional, 
-    Trilho, 
+    Linha,
+    Estacao,
+    PontoOperacional,
+    Trilho,
     Inspecao,
     MedicaoDesgaste,
     FaixaLocalizacao,
@@ -13,6 +13,7 @@ from .models import (
     SetorInspecao,
     OcorrenciaInspecaoTrecho,
     TrocaTrilho,
+    Lubrificador,
 )
 
 
@@ -107,3 +108,9 @@ class TrocaTrilhoAdmin(admin.ModelAdmin):
     )
     list_filter = ('data_troca', 'via', 'trilho', 'tipo_solda', 'perfil_trilho', 'classe_trilho')
     search_fields = ('mt_inicial', 'mt_final', 'responsavel', 'estacao_referencia', 'referencia_local', 'os_numero')
+
+
+@admin.register(Lubrificador)
+class LubrificadorAdmin(admin.ModelAdmin):
+    list_display = ("nome", "via", "mt", "status_operacional")
+    list_filter  = ("status_operacional", "via")

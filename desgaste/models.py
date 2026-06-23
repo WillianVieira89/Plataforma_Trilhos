@@ -308,6 +308,34 @@ class CriticidadeChoices(models.TextChoices):
     CRITICA = "critica", "Crítica"
 
 
+class StatusLubrificadorChoices(models.TextChoices):
+    OPERANTE   = "OPERANTE",   "Operante"
+    INOPERANTE = "INOPERANTE", "Inoperante"
+    MANUTENCAO = "MANUTENCAO", "Em manutenção"
+
+
+class Lubrificador(models.Model):
+    nome = models.CharField(max_length=100)
+    via = models.CharField(
+        max_length=1,
+        choices=ViaChoices.choices,
+        blank=True,
+    )
+    mt = models.CharField(max_length=30, blank=True)
+    status_operacional = models.CharField(
+        max_length=20,
+        choices=StatusLubrificadorChoices.choices,
+        default=StatusLubrificadorChoices.OPERANTE,
+    )
+
+    class Meta:
+        verbose_name = "Lubrificador"
+        verbose_name_plural = "Lubrificadores"
+
+    def __str__(self):
+        return self.nome
+
+
 class SetorInspecao(models.Model):
     codigo = models.CharField(max_length=20, unique=True)
     nome = models.CharField(max_length=100)
