@@ -38,6 +38,7 @@ from .models import (
     ResultadoInspecaoChoices,
     ResultadoCorretivaChoices,
     SituacaoPendenciaChoices,
+    FalhaRegistroLubrificador,
 )
 
 MT_TRECHO_INICIAL = 1
@@ -667,58 +668,74 @@ def registrar_inspecao_lubrificador(request, pk):
         )
 
         if form.is_valid():
-            with transaction.atomic():
-                registro = form.save(commit=False)
-
-                registro.tipo_atuacao = (
-                    TipoAtuacaoLubrificadorChoices.INSPECAO
-                )
-
-                if (
-                    registro.resultado_inspecao
-                    == ResultadoInspecaoChoices.COM_ANOMALIA
-                ):
-                    registro.situacao_pendencia = (
-                        SituacaoPendenciaChoices.AGUARDANDO_CORRETIVA
-                    )
-                else:
-                    registro.situacao_pendencia = (
-                        SituacaoPendenciaChoices.SEM_PENDENCIA
-                    )
-
-                if request.user.is_authenticated:
-                    registro.registrado_por = request.user
-
-                registro.save()
-
-                lubrificador.status_operacional = (
-                    registro.status_operacional
-                )
-                lubrificador.save(
-                    update_fields=["status_operacional"]
-                )
+            resultado = form.cleaned_data.get("resultado_inspecao")
+            falhas_selecionadas = form.cleaned_data.get("falhas", [])
 
             if (
-                registro.resultado_inspecao
-                == ResultadoInspecaoChoices.COM_ANOMALIA
+                resultado == ResultadoInspecaoChoices.COM_ANOMALIA
+                and not falhas_selecionadas
             ):
-                messages.warning(
-                    request,
-                    (
-                        f"Inspeção do {lubrificador.nome} registrada "
-                        "com pendência aguardando corretiva."
-                    ),
+                form.add_error(
+                    "falhas",
+                    "Selecione ao menos uma falha identificada.",
                 )
             else:
-                messages.success(
-                    request,
-                    (
-                        f"Inspeção do {lubrificador.nome} registrada "
-                        "sem pendências."
-                    ),
-                )
+                with transaction.atomic():
+                    registro = form.save(commit=False)
 
-            return redirect("listar_lubrificadores")
+                    registro.tipo_atuacao = (
+                        TipoAtuacaoLubrificadorChoices.INSPECAO
+                    )
+
+                    if resultado == ResultadoInspecaoChoices.COM_ANOMALIA:
+                        registro.situacao_pendencia = (
+                            SituacaoPendenciaChoices.AGUARDANDO_CORRETIVA
+                        )
+                    else:
+                        registro.situacao_pendencia = (
+                            SituacaoPendenciaChoices.SEM_PENDENCIA
+                        )
+
+                    if request.user.is_authenticated:
+                        registro.registrado_por = request.user
+
+                    registro.save()
+
+                    registro.falhas.all().delete()
+                    if falhas_selecionadas:
+                        FalhaRegistroLubrificador.objects.bulk_create([
+                            FalhaRegistroLubrificador(
+                                registro_inspecao=registro,
+                                codigo=codigo,
+                            )
+                            for codigo in falhas_selecionadas
+                        ])
+
+                    lubrificador.status_operacional = (
+                        registro.status_operacional
+                    )
+                    lubrificador.save(
+                        update_fields=["status_operacional"]
+                    )
+
+                if resultado == ResultadoInspecaoChoices.COM_ANOMALIA:
+                    messages.warning(
+                        request,
+                        (
+                            f"Inspeção do {lubrificador.nome} registrada "
+                            "com pendência aguardando corretiva."
+                        ),
+                    )
+                else:
+                    messages.success(
+                        request,
+                        (
+                            f"Inspeção do {lubrificador.nome} registrada "
+                            "sem pendências."
+                        ),
+                    )
+
+                return redirect("listar_lubrificadores")
     else:
         form = InspecaoLubrificadorForm(
             instance=instancia,

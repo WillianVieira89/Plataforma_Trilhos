@@ -111,6 +111,38 @@
         font-size: 14px;
     }
 
+    .falhas-grid ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+        gap: 8px;
+    }
+
+    .falhas-grid li {
+        padding: 8px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        background: #f8fafc;
+    }
+
+    .falhas-grid li label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        margin: 0;
+    }
+
+    .falhas-grid input[type="checkbox"] {
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
+
 </style>
 
 <div class="page-header">
@@ -311,6 +343,24 @@
                     <div class="alert-danger">{{ error }}</div>
                     {% endfor %}
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="bloco-falhas" class="card" style="display: none;">
+        <div class="card-header">Falhas identificadas</div>
+
+        <div class="card-body">
+            <p class="section-description">
+                Selecione todas as falhas encontradas nesta inspeção.
+            </p>
+
+            {% for error in form.falhas.errors %}
+            <div class="alert-danger">{{ error }}</div>
+            {% endfor %}
+
+            <div class="falhas-grid">
+                {{ form.falhas }}
             </div>
         </div>
     </div>
@@ -528,6 +578,24 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     atualizarNaoConformidades();
+
+    const campoResultado = document.getElementById(
+        "id_resultado_inspecao"
+    );
+    const blocoFalhas = document.getElementById("bloco-falhas");
+
+    function toggleBlocoFalhas() {
+        if (!blocoFalhas) return;
+        blocoFalhas.style.display =
+            campoResultado && campoResultado.value === "COM_ANOMALIA"
+                ? ""
+                : "none";
+    }
+
+    if (campoResultado) {
+        campoResultado.addEventListener("change", toggleBlocoFalhas);
+        toggleBlocoFalhas();
+    }
 });
 </script>
 {% endblock %}

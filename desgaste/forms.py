@@ -21,6 +21,8 @@ from .models import (
     Lubrificador,
     RegistroLubrificador,
     OrdemCorretivaLubrificador,
+    FalhaRegistroLubrificador,
+    FalhaLubrificadorChoices,
     ResultadoInspecaoChoices,
     StatusLubrificadorChoices,
     AlimentacaoEletricaChoices,
@@ -723,6 +725,13 @@ class BaseAtuacaoLubrificadorForm(forms.ModelForm):
 
 
 class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
+    falhas = forms.MultipleChoiceField(
+        label="Falhas identificadas",
+        choices=FalhaLubrificadorChoices.choices,
+        widget=forms.CheckboxSelectMultiple(),
+        required=False,
+    )
+
     class Meta(BaseAtuacaoLubrificadorForm.Meta):
         fields = [
             "data_hora",
@@ -866,6 +875,18 @@ class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
 
 
 class CorretivaLubrificadorForm(BaseAtuacaoLubrificadorForm):
+    numero_ordem = forms.CharField(
+        label="Número da ordem corretiva (OS)",
+        max_length=50,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Ex.: 54109217",
+                "autocomplete": "off",
+            }
+        ),
+    )
+
     class Meta(BaseAtuacaoLubrificadorForm.Meta):
         fields = [
             "data_hora",
@@ -900,6 +921,18 @@ class CorretivaLubrificadorForm(BaseAtuacaoLubrificadorForm):
             )
 
         return servico
+
+    def clean_numero_ordem(self):
+        numero = str(
+            self.cleaned_data.get("numero_ordem") or ""
+        ).strip().upper()
+
+        if not numero:
+            raise forms.ValidationError(
+                "Informe o número da ordem corretiva."
+            )
+
+        return numero
 
 
 class OrdemCorretivaLubrificadorForm(forms.ModelForm):
