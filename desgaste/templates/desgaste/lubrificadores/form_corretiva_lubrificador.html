@@ -372,15 +372,27 @@
         <div class="card-header">Ordens corretivas</div>
 
         <div class="card-body">
+            {% if primeira_corretiva %}
             <p class="section-description">
                 Foram identificadas
                 <strong>{{ quantidade_ordens }}</strong>
-                falha{{ quantidade_ordens|pluralize }} técnica{{ quantidade_ordens|pluralize }}.
-                Informe pelo menos
-                <strong>{{ quantidade_ordens }}</strong>
-                ordem{{ quantidade_ordens|pluralize:"em,ens" }}
-                corretiva{{ quantidade_ordens|pluralize }}.
+                falha{{ quantidade_ordens|pluralize }}
+                técnica{{ quantidade_ordens|pluralize }}.
+                Informe as ordens corretivas correspondentes.
             </p>
+            {% elif ordens_parciais_anteriores %}
+            <p class="section-description">
+                As ordens executadas parcialmente foram carregadas
+                automaticamente. Atualize apenas o status após a nova
+                atuação.
+            </p>
+            {% else %}
+            <p class="section-description">
+                Todas as ordens cadastradas anteriormente estão
+                executadas e não aparecem mais nesta tela. Adicione
+                outra ordem somente quando necessário.
+            </p>
+            {% endif %}
 
             {% if falhas_inspecao %}
             <ul>
@@ -427,12 +439,14 @@
                         {{ ordem_form.DELETE }}
                     </div>
 
+                    {% if not ordem_form.initial.numero %}
                     <button
                         type="button"
                         class="btn btn-danger remover-ordem"
                     >
                         Remover
                     </button>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>

@@ -1028,6 +1028,23 @@ class OrdemCorretivaLubrificadorForm(forms.ModelForm):
             "numero": "Número da ordem corretiva",
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        numero_inicial = str(
+            self.initial.get("numero") or ""
+        ).strip().upper()
+
+        if numero_inicial:
+            self.fields["numero"].widget.attrs[
+                "readonly"
+            ] = "readonly"
+
+            self.fields["numero"].help_text = (
+                "Ordem parcial carregada automaticamente. "
+                "Atualize apenas o status."
+            )
+
     def clean_numero(self):
         numero = str(
             self.cleaned_data.get("numero") or ""
@@ -1036,6 +1053,15 @@ class OrdemCorretivaLubrificadorForm(forms.ModelForm):
         if not numero:
             raise forms.ValidationError(
                 "Informe o número da ordem corretiva."
+            )
+
+        numero_inicial = str(
+            self.initial.get("numero") or ""
+        ).strip().upper()
+
+        if numero_inicial and numero != numero_inicial:
+            raise forms.ValidationError(
+                "O número da ordem parcial não pode ser alterado."
             )
 
         return numero
@@ -1049,8 +1075,8 @@ class OrdemCorretivaLubrificadorBaseFormSet(BaseInlineFormSet):
         **kwargs,
     ):
         self.quantidade_minima = max(
-            1,
-            int(quantidade_minima or 1),
+            0,
+            int(quantidade_minima or 0),
         )
 
         super().__init__(*args, **kwargs)

@@ -724,6 +724,12 @@ class OrdemCorretivaLubrificador(models.Model):
         verbose_name="Status da ordem",
     )
 
+    falha_vinculada = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Falha vinculada à ordem",
+    )
+
     class Meta:
         ordering = ["numero"]
         verbose_name = "Ordem corretiva do lubrificador"
