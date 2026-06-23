@@ -315,9 +315,9 @@ class StatusLubrificadorChoices(models.TextChoices):
     OPERANTE = "OPERANTE", "Operacional"
     OPERANTE_RESTRICAO = (
         "OPERANTE_RESTRICAO",
-        "Operante com restrição",
+        "Operacional com restrição",
     )
-    MANUTENCAO = "MANUTENCAO", "Em manutenção"
+    MANUTENCAO = "MANUTENCAO", "Manutenção"
     INOPERANTE = "INOPERANTE", "Inoperante"
 
 
