@@ -762,6 +762,19 @@ def registrar_corretiva_lubrificador(
         resultado_inspecao=ResultadoInspecaoChoices.COM_ANOMALIA,
     )
 
+    falhas_inspecao = [
+        falha.strip()
+        for falha in (
+            inspecao_origem.falha_encontrada or ""
+        ).split(";")
+        if falha.strip()
+    ]
+
+    quantidade_ordens = max(
+        1,
+        len(falhas_inspecao),
+    )
+
     if not inspecao_origem.pendencia_aberta:
         messages.info(
             request,
@@ -831,6 +844,7 @@ def registrar_corretiva_lubrificador(
             request.POST,
             instance=instancia,
             prefix="ordens",
+            quantidade_minima=quantidade_ordens,
         )
 
         if form.is_valid() and ordens_formset.is_valid():
@@ -912,6 +926,7 @@ def registrar_corretiva_lubrificador(
         ordens_formset = OrdemCorretivaLubrificadorFormSet(
             instance=instancia,
             prefix="ordens",
+            quantidade_minima=quantidade_ordens,
         )
 
     return render(
@@ -923,6 +938,8 @@ def registrar_corretiva_lubrificador(
         {
             "form": form,
             "ordens_formset": ordens_formset,
+            "falhas_inspecao": falhas_inspecao,
+            "quantidade_ordens": quantidade_ordens,
             "lubrificador": lubrificador,
             "inspecao_origem": inspecao_origem,
             "titulo": (

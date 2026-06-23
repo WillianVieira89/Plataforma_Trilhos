@@ -748,13 +748,23 @@ class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
         ]
 
     def identificar_nao_conformidades(self, cleaned_data):
+        status = cleaned_data.get("status_operacional")
+
+        if (
+            status
+            and status != StatusLubrificadorChoices.OPERANTE
+        ):
+            opcoes = dict(StatusLubrificadorChoices.choices)
+            descricao = opcoes.get(status, status)
+
+            return [
+                f"Status operacional: {descricao}"
+            ]
+
+        return []
+
+    def identificar_falhas(self, cleaned_data):
         verificacoes = [
-            (
-                "Status operacional",
-                "status_operacional",
-                StatusLubrificadorChoices.OPERANTE,
-                dict(StatusLubrificadorChoices.choices),
-            ),
             (
                 "Alimentação elétrica",
                 "alimentacao_eletrica",
@@ -787,15 +797,14 @@ class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
             ),
         ]
 
-        nao_conformidades = []
+        falhas = []
 
         for titulo, campo, valor_normal, opcoes in verificacoes:
             valor = cleaned_data.get(campo)
 
             if valor and valor != valor_normal:
                 descricao = opcoes.get(valor, valor)
-
-                nao_conformidades.append(
+                falhas.append(
                     f"{titulo}: {descricao}"
                 )
 
@@ -811,61 +820,64 @@ class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
         ):
             quantidade_falhas = total - funcionais
 
-            nao_conformidades.append(
+            falhas.append(
                 (
                     f"Bicos com falha: {quantidade_falhas} "
                     f"de {total}"
                 )
             )
 
-        return nao_conformidades
+        return falhas
 
     def clean(self):
         cleaned_data = super().clean()
 
         resultado = cleaned_data.get("resultado_inspecao")
 
-        nao_conformidades = self.identificar_nao_conformidades(
-            cleaned_data
+        nao_conformidades = (
+            self.identificar_nao_conformidades(cleaned_data)
         )
+
+        falhas = self.identificar_falhas(cleaned_data)
+
+        condicoes_anormais = nao_conformidades + falhas
 
         self.nao_conformidades_identificadas = (
             nao_conformidades
         )
+        self.falhas_identificadas = falhas
 
         if (
             resultado == ResultadoInspecaoChoices.COM_ANOMALIA
-            and not nao_conformidades
+            and not condicoes_anormais
         ):
             self.add_error(
                 "resultado_inspecao",
                 (
-                    "Para registrar uma anomalia, selecione ao "
-                    "menos uma condição diferente do funcionamento "
-                    "normal nos campos técnicos."
+                    "Para registrar uma anomalia, informe um "
+                    "status diferente de Operante ou selecione "
+                    "ao menos uma condição técnica anormal."
                 ),
             )
 
         if (
             resultado == ResultadoInspecaoChoices.CONFORME
-            and nao_conformidades
+            and condicoes_anormais
         ):
             self.add_error(
                 "resultado_inspecao",
                 (
                     "O resultado não pode ser Conforme porque foram "
                     "identificadas as seguintes condições: "
-                    + "; ".join(nao_conformidades)
+                    + "; ".join(condicoes_anormais)
                 ),
             )
 
         if (
             resultado == ResultadoInspecaoChoices.COM_ANOMALIA
-            and nao_conformidades
+            and falhas
         ):
-            self.instance.falha_encontrada = "; ".join(
-                nao_conformidades
-            )
+            self.instance.falha_encontrada = "; ".join(falhas)
         else:
             self.instance.falha_encontrada = ""
 
@@ -938,6 +950,22 @@ class OrdemCorretivaLubrificadorForm(forms.ModelForm):
 
 
 class OrdemCorretivaLubrificadorBaseFormSet(BaseInlineFormSet):
+    def __init__(
+        self,
+        *args,
+        quantidade_minima=1,
+        **kwargs,
+    ):
+        self.quantidade_minima = max(
+            1,
+            int(quantidade_minima or 1),
+        )
+
+        super().__init__(*args, **kwargs)
+
+        if not self.is_bound:
+            self.extra = self.quantidade_minima
+
     def clean(self):
         super().clean()
 
@@ -970,9 +998,14 @@ class OrdemCorretivaLubrificadorBaseFormSet(BaseInlineFormSet):
 
             numeros.append(numero)
 
-        if quantidade_valida == 0:
+        if quantidade_valida < self.quantidade_minima:
             raise forms.ValidationError(
-                "Informe pelo menos uma ordem corretiva."
+                (
+                    f"Foram identificadas "
+                    f"{self.quantidade_minima} falhas. "
+                    f"Informe pelo menos "
+                    f"{self.quantidade_minima} ordens corretivas."
+                )
             )
 
 

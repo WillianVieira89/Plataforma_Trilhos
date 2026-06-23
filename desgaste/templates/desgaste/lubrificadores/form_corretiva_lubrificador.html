@@ -365,9 +365,22 @@
 
         <div class="card-body">
             <p class="section-description">
-                Informe pelo menos uma ordem. Utilize o botão para
-                adicionar outras ordens relacionadas à mesma corretiva.
+                Foram identificadas
+                <strong>{{ quantidade_ordens }}</strong>
+                falha{{ quantidade_ordens|pluralize }} técnica{{ quantidade_ordens|pluralize }}.
+                Informe pelo menos
+                <strong>{{ quantidade_ordens }}</strong>
+                ordem{{ quantidade_ordens|pluralize:"em,ens" }}
+                corretiva{{ quantidade_ordens|pluralize }}.
             </p>
+
+            {% if falhas_inspecao %}
+            <ul>
+                {% for falha in falhas_inspecao %}
+                <li>{{ falha }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
 
             {{ ordens_formset.management_form }}
 

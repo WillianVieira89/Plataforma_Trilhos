@@ -316,6 +316,25 @@
     </div>
 
     <div class="card">
+        <div class="card-header">Falhas identificadas</div>
+
+        <div class="card-body">
+            <div
+                id="resumo-falhas"
+                class="resumo-nao-conformidades"
+            >
+                <strong>Falhas do equipamento</strong>
+
+                <p id="resumo-falhas-vazio">
+                    Nenhuma falha técnica identificada.
+                </p>
+
+                <ul id="lista-falhas"></ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
         <div class="card-header">Não conformidades e observações</div>
 
         <div class="card-body">
@@ -367,25 +386,24 @@ document.addEventListener("DOMContentLoaded", function () {
     const texto = document.getElementById("nivel-graxa-texto");
 
     function atualizarNivel() {
-        let nivel = Number(campoNivel.value || 0);
+        let nivel = Number(campoNivel?.value || 0);
 
-        if (nivel < 0) {
-            nivel = 0;
+        nivel = Math.max(0, Math.min(100, nivel));
+
+        if (barra) {
+            barra.style.width = nivel + "%";
+
+            if (nivel <= 20) {
+                barra.style.background = "#dc2626";
+            } else if (nivel <= 50) {
+                barra.style.background = "#d97706";
+            } else {
+                barra.style.background = "#16a34a";
+            }
         }
 
-        if (nivel > 100) {
-            nivel = 100;
-        }
-
-        barra.style.width = nivel + "%";
-        texto.textContent = nivel + "%";
-
-        if (nivel <= 20) {
-            barra.style.background = "#dc2626";
-        } else if (nivel <= 50) {
-            barra.style.background = "#d97706";
-        } else {
-            barra.style.background = "#16a34a";
+        if (texto) {
+            texto.textContent = nivel + "%";
         }
     }
 
@@ -394,12 +412,15 @@ document.addEventListener("DOMContentLoaded", function () {
         atualizarNivel();
     }
 
-    const verificacoes = [
+    const verificacoesNaoConformidades = [
         {
             id: "id_status_operacional",
             normal: "OPERANTE",
             titulo: "Status operacional",
         },
+    ];
+
+    const verificacoesFalhas = [
         {
             id: "id_alimentacao_eletrica",
             normal: "NORMAL",
@@ -427,17 +448,7 @@ document.addEventListener("DOMContentLoaded", function () {
         },
     ];
 
-    const caixaResumo = document.getElementById(
-        "resumo-nao-conformidades"
-    );
-    const listaResumo = document.getElementById(
-        "lista-nao-conformidades"
-    );
-    const textoVazio = document.getElementById(
-        "resumo-nao-conformidades-vazio"
-    );
-
-    function atualizarNaoConformidades() {
+    function obterItens(verificacoes) {
         const itens = [];
 
         verificacoes.forEach(function (verificacao) {
@@ -460,6 +471,45 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
+        return itens;
+    }
+
+    function renderizarResumo(
+        caixa,
+        lista,
+        textoVazio,
+        itens
+    ) {
+        if (!caixa || !lista || !textoVazio) {
+            return;
+        }
+
+        lista.innerHTML = "";
+
+        itens.forEach(function (item) {
+            const li = document.createElement("li");
+            li.textContent = item;
+            lista.appendChild(li);
+        });
+
+        if (itens.length > 0) {
+            caixa.classList.add("tem-falha");
+            textoVazio.style.display = "none";
+            lista.style.display = "block";
+        } else {
+            caixa.classList.remove("tem-falha");
+            textoVazio.style.display = "block";
+            lista.style.display = "none";
+        }
+    }
+
+    function atualizarResumos() {
+        const naoConformidades = obterItens(
+            verificacoesNaoConformidades
+        );
+
+        const falhas = obterItens(verificacoesFalhas);
+
         const campoTotal = document.getElementById(
             "id_quantidade_total_bicos"
         );
@@ -475,7 +525,7 @@ document.addEventListener("DOMContentLoaded", function () {
             && campoFuncionais?.value !== ""
             && funcionais < total
         ) {
-            itens.push(
+            falhas.push(
                 "Bicos com falha: "
                 + (total - funcionais)
                 + " de "
@@ -483,32 +533,39 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
 
-        listaResumo.innerHTML = "";
+        renderizarResumo(
+            document.getElementById(
+                "resumo-nao-conformidades"
+            ),
+            document.getElementById(
+                "lista-nao-conformidades"
+            ),
+            document.getElementById(
+                "resumo-nao-conformidades-vazio"
+            ),
+            naoConformidades
+        );
 
-        itens.forEach(function (item) {
-            const li = document.createElement("li");
-            li.textContent = item;
-            listaResumo.appendChild(li);
-        });
-
-        if (itens.length > 0) {
-            caixaResumo.classList.add("tem-falha");
-            textoVazio.style.display = "none";
-            listaResumo.style.display = "block";
-        } else {
-            caixaResumo.classList.remove("tem-falha");
-            textoVazio.style.display = "block";
-            listaResumo.style.display = "none";
-        }
+        renderizarResumo(
+            document.getElementById("resumo-falhas"),
+            document.getElementById("lista-falhas"),
+            document.getElementById(
+                "resumo-falhas-vazio"
+            ),
+            falhas
+        );
     }
 
-    verificacoes.forEach(function (verificacao) {
+    [
+        ...verificacoesNaoConformidades,
+        ...verificacoesFalhas,
+    ].forEach(function (verificacao) {
         const campo = document.getElementById(verificacao.id);
 
         if (campo) {
             campo.addEventListener(
                 "change",
-                atualizarNaoConformidades
+                atualizarResumos
             );
         }
     });
@@ -522,12 +579,12 @@ document.addEventListener("DOMContentLoaded", function () {
         if (campo) {
             campo.addEventListener(
                 "input",
-                atualizarNaoConformidades
+                atualizarResumos
             );
         }
     });
 
-    atualizarNaoConformidades();
+    atualizarResumos();
 });
 </script>
 {% endblock %}
