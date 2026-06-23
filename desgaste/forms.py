@@ -18,6 +18,8 @@ from .models import (
     Estacao,
     ViaChoices,
     TrilhoChoices,
+    Lubrificador,
+    RegistroLubrificador,
 )
 
 
@@ -567,3 +569,198 @@ class TrocaTrilhoForm(forms.ModelForm):
             self.add_error("mt_final", "O MT final deve ser diferente do MT inicial.")
 
         return cleaned_data
+
+
+class RegistroLubrificadorForm(forms.ModelForm):
+    class Meta:
+        model = RegistroLubrificador
+        fields = [
+            "data_hora",
+            "status_operacional",
+            "nivel_graxa_percentual",
+            "alimentacao_eletrica",
+            "tensao_alimentacao",
+            "controladora",
+            "motor",
+            "integridade_regua",
+            "quantidade_total_bicos",
+            "quantidade_bicos_funcionais",
+            "sensor_inducao",
+            "falha_encontrada",
+            "servico_executado",
+            "observacoes",
+        ]
+
+        widgets = {
+            "data_hora": forms.DateTimeInput(
+                format="%Y-%m-%dT%H:%M",
+                attrs={
+                    "type": "datetime-local",
+                    "class": "form-control",
+                },
+            ),
+            "status_operacional": forms.Select(
+                attrs={"class": "form-control"}
+            ),
+            "nivel_graxa_percentual": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "min": "0",
+                    "max": "100",
+                    "step": "1",
+                    "placeholder": "Ex.: 80",
+                }
+            ),
+            "alimentacao_eletrica": forms.Select(
+                attrs={"class": "form-control"}
+            ),
+            "tensao_alimentacao": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "min": "0",
+                    "step": "0.01",
+                    "placeholder": "Ex.: 220.00",
+                }
+            ),
+            "controladora": forms.Select(
+                attrs={"class": "form-control"}
+            ),
+            "motor": forms.Select(
+                attrs={"class": "form-control"}
+            ),
+            "integridade_regua": forms.Select(
+                attrs={"class": "form-control"}
+            ),
+            "quantidade_total_bicos": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "min": "0",
+                    "step": "1",
+                    "placeholder": "Quantidade instalada",
+                }
+            ),
+            "quantidade_bicos_funcionais": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "min": "0",
+                    "step": "1",
+                    "placeholder": "Quantidade funcionando",
+                }
+            ),
+            "sensor_inducao": forms.Select(
+                attrs={"class": "form-control"}
+            ),
+            "falha_encontrada": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": (
+                        "Descreva falhas, defeitos ou condições encontradas."
+                    ),
+                }
+            ),
+            "servico_executado": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": "Descreva o serviço executado.",
+                }
+            ),
+            "observacoes": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": "Informações adicionais.",
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["data_hora"].input_formats = [
+            "%Y-%m-%dT%H:%M",
+        ]
+
+        if not self.instance.pk and not self.is_bound:
+            self.fields["data_hora"].initial = (
+                timezone.localtime().strftime("%Y-%m-%dT%H:%M")
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        total = cleaned_data.get("quantidade_total_bicos")
+        funcionais = cleaned_data.get("quantidade_bicos_funcionais")
+
+        if total is None and funcionais is not None:
+            self.add_error(
+                "quantidade_total_bicos",
+                "Informe também a quantidade total de bicos.",
+            )
+
+        if total is not None and funcionais is None:
+            self.add_error(
+                "quantidade_bicos_funcionais",
+                "Informe também a quantidade de bicos funcionais.",
+            )
+
+        if (
+            total is not None
+            and funcionais is not None
+            and funcionais > total
+        ):
+            self.add_error(
+                "quantidade_bicos_funcionais",
+                (
+                    "A quantidade de bicos funcionais não pode ser "
+                    "maior que a quantidade total."
+                ),
+            )
+
+        return cleaned_data
+
+
+class LubrificadorCadastroForm(forms.ModelForm):
+    class Meta:
+        model = Lubrificador
+        fields = [
+            "nome",
+            "via",
+            "mt",
+        ]
+
+        widgets = {
+            "nome": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Ex.: LUB-27",
+                }
+            ),
+            "via": forms.Select(
+                attrs={"class": "form-control"}
+            ),
+            "mt": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Ex.: MT-1541",
+                }
+            ),
+        }
+
+    def clean_nome(self):
+        nome = self.cleaned_data["nome"].strip().upper()
+
+        queryset = Lubrificador.objects.filter(
+            nome__iexact=nome
+        )
+
+        if self.instance.pk:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise forms.ValidationError(
+                "Já existe um lubrificador com este nome."
+            )
+
+        return nome

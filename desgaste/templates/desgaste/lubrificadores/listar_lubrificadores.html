@@ -1,0 +1,589 @@
+{% extends "base.html" %}
+
+{% block title %}Lubrificadores{% endblock %}
+
+{% block page_actions %}
+<div class="action-bar">
+    <div class="action-bar-left">
+        <a href="{% url 'tela_inicial' %}" class="btn btn-ghost">
+            Início
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+    .lubrificadores-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(280px, 1fr));
+        gap: 20px;
+        margin-bottom: 28px;
+    }
+
+    .lubrificador-card {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        height: 100%;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        background: #ffffff;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+        transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease;
+    }
+
+    .lubrificador-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.10);
+    }
+
+    .lubrificador-card-topo {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 18px 18px 14px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .lubrificador-nome {
+        margin: 0;
+        font-size: 21px;
+        line-height: 1.2;
+    }
+
+    .lubrificador-localizacao {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        max-width: 150px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.25;
+        text-align: center;
+    }
+
+    .badge-OPERANTE {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-OPERANTE_RESTRICAO {
+        background: #ffedd5;
+        color: #9a3412;
+    }
+
+    .badge-MANUTENCAO {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-INOPERANTE {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .badge-SEM-INSPECAO {
+        background: #e5e7eb;
+        color: #475569;
+    }
+
+    .lubrificador-card-corpo {
+        flex: 1;
+        padding: 18px;
+    }
+
+    .tanque-topo {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .tanque-label {
+        font-size: 13px;
+        color: var(--muted);
+    }
+
+    .tanque-valor {
+        font-size: 16px;
+        font-weight: 800;
+    }
+
+    .tanque-barra {
+        width: 100%;
+        height: 16px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e5e7eb;
+        margin-bottom: 18px;
+    }
+
+    .tanque-preenchimento {
+        height: 100%;
+        border-radius: inherit;
+    }
+
+    .graxa-alta {
+        background: #16a34a;
+    }
+
+    .graxa-media {
+        background: #d97706;
+    }
+
+    .graxa-baixa {
+        background: #dc2626;
+    }
+
+    .componentes-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .componente {
+        min-width: 0;
+        padding: 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #f8fafc;
+    }
+
+    .componente-label {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .componente-valor {
+        display: block;
+        overflow-wrap: anywhere;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .falha-atual {
+        margin-top: 14px;
+        padding: 12px;
+        border-left: 4px solid #d97706;
+        border-radius: 8px;
+        background: #fffbeb;
+    }
+
+    .falha-atual-label {
+        display: block;
+        margin-bottom: 5px;
+        color: #92400e;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .falha-atual-texto {
+        margin: 0;
+        color: #78350f;
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
+    .sem-inspecao-texto {
+        padding: 18px 0;
+        color: var(--muted);
+        text-align: center;
+    }
+
+    .ultima-atualizacao {
+        margin-top: 15px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .lubrificador-card-acoes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 14px 18px 18px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .lubrificador-card-acoes .btn {
+        flex: 1 1 auto;
+        min-width: 120px;
+        text-align: center;
+    }
+
+    .filtros-acoes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    @media (max-width: 1200px) {
+        .lubrificadores-grid {
+            grid-template-columns: repeat(2, minmax(280px, 1fr));
+        }
+    }
+
+    @media (max-width: 700px) {
+        .lubrificadores-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .lubrificador-card-topo {
+            flex-direction: column;
+        }
+
+        .badge-status {
+            max-width: none;
+        }
+    }
+
+    @media (max-width: 420px) {
+        .componentes-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .lubrificador-card-acoes {
+            flex-direction: column;
+        }
+
+        .lubrificador-card-acoes .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Painel de lubrificadores</h1>
+
+        <p class="page-subtitle">
+            Acompanhamento visual da condição operacional,
+            nível de graxa e componentes dos equipamentos.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Filtros</div>
+
+    <div class="card-body">
+        <form method="get">
+            <div class="grid-4">
+                <div class="field">
+                    <label for="filtro-via">Via</label>
+
+                    <select
+                        id="filtro-via"
+                        name="via"
+                        class="form-control"
+                    >
+                        <option value="">Todas</option>
+
+                        <option
+                            value="1"
+                            {% if filtro_via == "1" %}selected{% endif %}
+                        >
+                            Via 01
+                        </option>
+
+                        <option
+                            value="2"
+                            {% if filtro_via == "2" %}selected{% endif %}
+                        >
+                            Via 02
+                        </option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="filtro-status">Status</label>
+
+                    <select
+                        id="filtro-status"
+                        name="status"
+                        class="form-control"
+                    >
+                        <option value="">Todos</option>
+
+                        {% for value, label in status_choices %}
+                        <option
+                            value="{{ value }}"
+                            {% if filtro_status == value %}selected{% endif %}
+                        >
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="filtros-acoes">
+                <button type="submit" class="btn btn-primary">
+                    Filtrar
+                </button>
+
+                <a
+                    href="{% url 'listar_lubrificadores' %}"
+                    class="btn btn-ghost"
+                >
+                    Limpar filtros
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if lubrificadores %}
+<div class="lubrificadores-grid">
+    {% for lubrificador in lubrificadores %}
+        {% with registro=lubrificador.ultimo_registro %}
+        <article class="lubrificador-card">
+            <div class="lubrificador-card-topo">
+                <div>
+                    <h2 class="lubrificador-nome">
+                        {{ lubrificador.nome }}
+                    </h2>
+
+                    <p class="lubrificador-localizacao">
+                        {{ lubrificador.get_via_display|default:"Via não informada" }}
+                        •
+                        {{ lubrificador.mt|default:"MT não informado" }}
+                    </p>
+                </div>
+
+                {% if registro %}
+                <span
+                    class="badge-status badge-{{ registro.status_operacional }}"
+                >
+                    {{ registro.get_status_operacional_display }}
+                </span>
+                {% else %}
+                <span class="badge-status badge-SEM-INSPECAO">
+                    Sem inspeção
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="lubrificador-card-corpo">
+                {% if registro %}
+                <div class="tanque-topo">
+                    <span class="tanque-label">
+                        Nível do tanque de graxa
+                    </span>
+
+                    <span class="tanque-valor">
+                        {{ registro.nivel_graxa_percentual }}%
+                    </span>
+                </div>
+
+                <div
+                    class="tanque-barra"
+                    role="progressbar"
+                    aria-label="Nível do tanque de graxa"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="{{ registro.nivel_graxa_percentual }}"
+                >
+                    <div
+                        class="
+                            tanque-preenchimento
+                            {% if registro.nivel_graxa_percentual <= 20 %}
+                                graxa-baixa
+                            {% elif registro.nivel_graxa_percentual <= 50 %}
+                                graxa-media
+                            {% else %}
+                                graxa-alta
+                            {% endif %}
+                        "
+                        style="width: {{ registro.nivel_graxa_percentual }}%;"
+                    ></div>
+                </div>
+
+                <div class="componentes-grid">
+                    <div class="componente">
+                        <span class="componente-label">
+                            Alimentação
+                        </span>
+
+                        <span class="componente-valor">
+                            {{ registro.get_alimentacao_eletrica_display }}
+                        </span>
+                    </div>
+
+                    <div class="componente">
+                        <span class="componente-label">
+                            Tensão
+                        </span>
+
+                        <span class="componente-valor">
+                            {% if registro.tensao_alimentacao != None %}
+                                {{ registro.tensao_alimentacao }} V
+                            {% else %}
+                                Não informada
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="componente">
+                        <span class="componente-label">
+                            Controladora
+                        </span>
+
+                        <span class="componente-valor">
+                            {{ registro.get_controladora_display }}
+                        </span>
+                    </div>
+
+                    <div class="componente">
+                        <span class="componente-label">
+                            Motor
+                        </span>
+
+                        <span class="componente-valor">
+                            {{ registro.get_motor_display }}
+                        </span>
+                    </div>
+
+                    <div class="componente">
+                        <span class="componente-label">
+                            Régua
+                        </span>
+
+                        <span class="componente-valor">
+                            {{ registro.get_integridade_regua_display }}
+                        </span>
+                    </div>
+
+                    <div class="componente">
+                        <span class="componente-label">
+                            Bicos funcionais
+                        </span>
+
+                        <span class="componente-valor">
+                            {% if registro.quantidade_total_bicos != None %}
+                                {{ registro.quantidade_bicos_funcionais }}/{{ registro.quantidade_total_bicos }}
+
+                                {% if registro.percentual_bicos_funcionais != None %}
+                                    — {{ registro.percentual_bicos_funcionais }}%
+                                {% endif %}
+                            {% else %}
+                                Não informados
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="componente">
+                        <span class="componente-label">
+                            Bicos com falha
+                        </span>
+
+                        <span class="componente-valor">
+                            {% if registro.quantidade_bicos_com_falha != None %}
+                                {{ registro.quantidade_bicos_com_falha }}
+                            {% else %}
+                                Não informado
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="componente">
+                        <span class="componente-label">
+                            Sensor de indução
+                        </span>
+
+                        <span class="componente-valor">
+                            {{ registro.get_sensor_inducao_display }}
+                        </span>
+                    </div>
+                </div>
+
+                {% if registro.falha_encontrada %}
+                <div class="falha-atual">
+                    <span class="falha-atual-label">
+                        Condição atual
+                    </span>
+
+                    <p class="falha-atual-texto">
+                        {{ registro.falha_encontrada|truncatechars:180 }}
+                    </p>
+                </div>
+                {% endif %}
+
+                <div class="ultima-atualizacao">
+                    Última atualização:
+                    <strong>
+                        {{ registro.data_hora|date:"d/m/Y H:i" }}
+                    </strong>
+
+                    {% if registro.registrado_por %}
+                    <br>
+
+                    Responsável:
+                    <strong>
+                        {% firstof registro.registrado_por.get_full_name registro.registrado_por.username %}
+                    </strong>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="sem-inspecao-texto">
+                    Nenhuma inspeção técnica foi registrada para este
+                    equipamento.
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="lubrificador-card-acoes">
+                <a
+                    href="{% url 'registrar_atualizacao_lubrificador' lubrificador.pk %}"
+                    class="btn btn-success"
+                >
+                    Registrar atualização
+                </a>
+
+                <a
+                    href="{% url 'historico_lubrificador' lubrificador.pk %}"
+                    class="btn btn-secondary"
+                >
+                    Ver histórico
+                </a>
+
+                {% if user.is_staff %}
+                <a
+                    href="{% url 'editar_lubrificador' lubrificador.pk %}"
+                    class="btn btn-warning"
+                >
+                    Editar cadastro
+                </a>
+                {% endif %}
+            </div>
+        </article>
+        {% endwith %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    Nenhum lubrificador foi encontrado com os filtros selecionados.
+</div>
+{% endif %}
+{% endblock %}

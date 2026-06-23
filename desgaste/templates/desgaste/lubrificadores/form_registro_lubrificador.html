@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block page_actions %}
+<div class="action-bar">
+    <div class="action-bar-left">
+        <a href="{% url 'listar_lubrificadores' %}" class="btn btn-ghost">
+            Voltar
+        </a>
+    </div>
+
+    <div class="action-bar-right">
+        <a
+            href="{% url 'historico_lubrificador' lubrificador.pk %}"
+            class="btn btn-secondary"
+        >
+            Ver histórico
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+    .lub-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        align-items: center;
+    }
+
+    .lub-info-item {
+        min-width: 150px;
+    }
+
+    .lub-info-label {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+
+    .lub-info-value {
+        font-weight: 700;
+        font-size: 16px;
+    }
+
+    .tanque-preview {
+        margin-top: 14px;
+    }
+
+    .tanque-linha {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 8px;
+    }
+
+    .tanque-barra {
+        width: 100%;
+        height: 18px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e5e7eb;
+    }
+
+    .tanque-preenchimento {
+        width: 0%;
+        height: 100%;
+        border-radius: inherit;
+        background: #dc2626;
+        transition: width 0.25s ease, background 0.25s ease;
+    }
+
+    .section-description {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 14px;
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ titulo }}</h1>
+        <p class="page-subtitle">
+            Registre a condição operacional e os resultados dos testes do equipamento.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Identificação do equipamento</div>
+
+    <div class="card-body">
+        <div class="lub-info">
+            <div class="lub-info-item">
+                <span class="lub-info-label">Lubrificador</span>
+                <span class="lub-info-value">{{ lubrificador.nome }}</span>
+            </div>
+
+            <div class="lub-info-item">
+                <span class="lub-info-label">Via</span>
+                <span class="lub-info-value">
+                    {{ lubrificador.get_via_display|default:"Não informada" }}
+                </span>
+            </div>
+
+            <div class="lub-info-item">
+                <span class="lub-info-label">MT</span>
+                <span class="lub-info-value">
+                    {{ lubrificador.mt|default:"Não informado" }}
+                </span>
+            </div>
+
+            <div class="lub-info-item">
+                <span class="lub-info-label">Status atual</span>
+                <span class="lub-info-value">
+                    {{ lubrificador.get_status_operacional_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="alert-danger">
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">Condição geral</div>
+
+        <div class="card-body">
+            <p class="section-description">
+                Informe o estado geral do equipamento e o nível atual do tanque.
+            </p>
+
+            <div class="grid-3">
+                <div class="field">
+                    {{ form.data_hora.label_tag }}
+                    {{ form.data_hora }}
+                    {% for error in form.data_hora.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field">
+                    {{ form.status_operacional.label_tag }}
+                    {{ form.status_operacional }}
+                    {% for error in form.status_operacional.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field">
+                    {{ form.nivel_graxa_percentual.label_tag }}
+                    {{ form.nivel_graxa_percentual }}
+                    {% for error in form.nivel_graxa_percentual.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="tanque-preview">
+                <div class="tanque-linha">
+                    <strong>Nível visual do tanque</strong>
+                    <strong id="nivel-graxa-texto">0%</strong>
+                </div>
+
+                <div class="tanque-barra">
+                    <div
+                        id="nivel-graxa-barra"
+                        class="tanque-preenchimento"
+                    ></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Sistema elétrico</div>
+
+        <div class="card-body">
+            <div class="grid-3">
+                <div class="field">
+                    {{ form.alimentacao_eletrica.label_tag }}
+                    {{ form.alimentacao_eletrica }}
+                    {% for error in form.alimentacao_eletrica.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field">
+                    {{ form.tensao_alimentacao.label_tag }}
+                    {{ form.tensao_alimentacao }}
+                    {% for error in form.tensao_alimentacao.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field">
+                    {{ form.controladora.label_tag }}
+                    {{ form.controladora }}
+                    {% for error in form.controladora.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Sistema mecânico e distribuição de graxa</div>
+
+        <div class="card-body">
+            <div class="grid-2">
+                <div class="field">
+                    {{ form.motor.label_tag }}
+                    {{ form.motor }}
+                    {% for error in form.motor.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field">
+                    {{ form.integridade_regua.label_tag }}
+                    {{ form.integridade_regua }}
+                    {% for error in form.integridade_regua.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="field">
+                    {{ form.quantidade_total_bicos.label_tag }}
+                    {{ form.quantidade_total_bicos }}
+                    {% for error in form.quantidade_total_bicos.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field">
+                    {{ form.quantidade_bicos_funcionais.label_tag }}
+                    {{ form.quantidade_bicos_funcionais }}
+                    {% for error in form.quantidade_bicos_funcionais.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Sensor de indução</div>
+
+        <div class="card-body">
+            <div class="grid-2">
+                <div class="field">
+                    {{ form.sensor_inducao.label_tag }}
+                    {{ form.sensor_inducao }}
+                    {% for error in form.sensor_inducao.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Manutenção e observações</div>
+
+        <div class="card-body">
+            <div class="field">
+                {{ form.falha_encontrada.label_tag }}
+                {{ form.falha_encontrada }}
+                {% for error in form.falha_encontrada.errors %}
+                <div class="alert-danger">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="field">
+                {{ form.servico_executado.label_tag }}
+                {{ form.servico_executado }}
+                {% for error in form.servico_executado.errors %}
+                <div class="alert-danger">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="field">
+                {{ form.observacoes.label_tag }}
+                {{ form.observacoes }}
+                {% for error in form.observacoes.errors %}
+                <div class="alert-danger">{{ error }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="page-actions">
+        <button type="submit" class="btn btn-success">
+            Salvar atualização
+        </button>
+
+        <a
+            href="{% url 'listar_lubrificadores' %}"
+            class="btn btn-ghost"
+        >
+            Cancelar
+        </a>
+    </div>
+</form>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const campoNivel = document.getElementById(
+        "id_nivel_graxa_percentual"
+    );
+    const barra = document.getElementById("nivel-graxa-barra");
+    const texto = document.getElementById("nivel-graxa-texto");
+
+    function atualizarNivel() {
+        let nivel = Number(campoNivel.value || 0);
+
+        if (nivel < 0) {
+            nivel = 0;
+        }
+
+        if (nivel > 100) {
+            nivel = 100;
+        }
+
+        barra.style.width = nivel + "%";
+        texto.textContent = nivel + "%";
+
+        if (nivel <= 20) {
+            barra.style.background = "#dc2626";
+        } else if (nivel <= 50) {
+            barra.style.background = "#d97706";
+        } else {
+            barra.style.background = "#16a34a";
+        }
+    }
+
+    if (campoNivel) {
+        campoNivel.addEventListener("input", atualizarNivel);
+        atualizarNivel();
+    }
+});
+</script>
+{% endblock %}

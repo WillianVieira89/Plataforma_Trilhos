@@ -1,5 +1,8 @@
-from django.db import models
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db import models
+from django.utils import timezone
 
 from .utils import extrair_numero_mt
 
@@ -306,6 +309,258 @@ class CriticidadeChoices(models.TextChoices):
     MEDIA = "media", "Média"
     ALTA = "alta", "Alta"
     CRITICA = "critica", "Crítica"
+
+
+class StatusLubrificadorChoices(models.TextChoices):
+    OPERANTE = "OPERANTE", "Operante"
+    OPERANTE_RESTRICAO = (
+        "OPERANTE_RESTRICAO",
+        "Operante com restrição",
+    )
+    MANUTENCAO = "MANUTENCAO", "Em manutenção"
+    INOPERANTE = "INOPERANTE", "Inoperante"
+
+
+class AlimentacaoEletricaChoices(models.TextChoices):
+    NORMAL = "NORMAL", "Normal"
+    AUSENTE = "AUSENTE", "Ausente"
+    INSTAVEL = "INSTAVEL", "Instável"
+    NAO_VERIFICADA = "NAO_VERIFICADA", "Não verificada"
+
+
+class ControladoraChoices(models.TextChoices):
+    LIGADA = "LIGADA", "Ligada"
+    DESLIGADA = "DESLIGADA", "Desligada"
+    COM_FALHA = "COM_FALHA", "Com falha"
+    NAO_VERIFICADA = "NAO_VERIFICADA", "Não verificada"
+
+
+class MotorLubrificadorChoices(models.TextChoices):
+    FUNCIONANDO = "FUNCIONANDO", "Ligado e funcionando"
+    DESLIGADO = "DESLIGADO", "Desligado"
+    TRAVADO = "TRAVADO", "Travado"
+    FUNCIONAMENTO_IRREGULAR = (
+        "FUNCIONAMENTO_IRREGULAR",
+        "Funcionamento irregular",
+    )
+    NAO_VERIFICADO = "NAO_VERIFICADO", "Não verificado"
+
+
+class IntegridadeReguaChoices(models.TextChoices):
+    INTEGRA = "INTEGRA", "Íntegra"
+    DANIFICADA = "DANIFICADA", "Danificada"
+    ENTUPIDA = "ENTUPIDA", "Entupida"
+    COM_VAZAMENTO = "COM_VAZAMENTO", "Com vazamento"
+    NAO_VERIFICADA = "NAO_VERIFICADA", "Não verificada"
+
+
+class SensorInducaoChoices(models.TextChoices):
+    FUNCIONANDO = "FUNCIONANDO", "Funcionando"
+    NAO_DETECTA = "NAO_DETECTA", "Não detecta"
+    INTERMITENTE = "INTERMITENTE", "Funcionamento intermitente"
+    DESALINHADO = "DESALINHADO", "Desalinhado"
+    NAO_TESTADO = "NAO_TESTADO", "Não testado"
+
+
+class Lubrificador(models.Model):
+    nome = models.CharField(max_length=100)
+
+    via = models.CharField(
+        max_length=1,
+        choices=ViaChoices.choices,
+        blank=True,
+    )
+
+    mt = models.CharField(
+        max_length=30,
+        blank=True,
+    )
+
+    status_operacional = models.CharField(
+        max_length=30,
+        choices=StatusLubrificadorChoices.choices,
+        default=StatusLubrificadorChoices.OPERANTE,
+    )
+
+    class Meta:
+        ordering = ["nome"]
+        verbose_name = "Lubrificador"
+        verbose_name_plural = "Lubrificadores"
+
+    def __str__(self):
+        return self.nome
+
+
+class RegistroLubrificador(models.Model):
+    lubrificador = models.ForeignKey(
+        Lubrificador,
+        on_delete=models.PROTECT,
+        related_name="registros",
+    )
+
+    data_hora = models.DateTimeField(
+        default=timezone.now,
+        verbose_name="Data e hora da inspeção",
+    )
+
+    status_operacional = models.CharField(
+        max_length=30,
+        choices=StatusLubrificadorChoices.choices,
+        verbose_name="Status operacional",
+    )
+
+    nivel_graxa_percentual = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(0),
+            MaxValueValidator(100),
+        ],
+        verbose_name="Nível de graxa (%)",
+    )
+
+    alimentacao_eletrica = models.CharField(
+        max_length=20,
+        choices=AlimentacaoEletricaChoices.choices,
+        verbose_name="Alimentação elétrica",
+    )
+
+    tensao_alimentacao = models.DecimalField(
+        max_digits=7,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        verbose_name="Tensão de alimentação (V)",
+    )
+
+    controladora = models.CharField(
+        max_length=20,
+        choices=ControladoraChoices.choices,
+        verbose_name="Controladora",
+    )
+
+    motor = models.CharField(
+        max_length=30,
+        choices=MotorLubrificadorChoices.choices,
+        verbose_name="Motor",
+    )
+
+    integridade_regua = models.CharField(
+        max_length=20,
+        choices=IntegridadeReguaChoices.choices,
+        verbose_name="Condição da régua",
+    )
+
+    quantidade_total_bicos = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Quantidade total de bicos",
+    )
+
+    quantidade_bicos_funcionais = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Quantidade de bicos funcionais",
+    )
+
+    sensor_inducao = models.CharField(
+        max_length=20,
+        choices=SensorInducaoChoices.choices,
+        verbose_name="Sensor de indução",
+    )
+
+    falha_encontrada = models.TextField(
+        blank=True,
+        verbose_name="Falha ou condição encontrada",
+    )
+
+    servico_executado = models.TextField(
+        blank=True,
+        verbose_name="Serviço executado",
+    )
+
+    observacoes = models.TextField(
+        blank=True,
+        verbose_name="Observações",
+    )
+
+    registrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="registros_lubrificadores",
+        verbose_name="Registrado por",
+    )
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_hora", "-criado_em"]
+        verbose_name = "Registro de lubrificador"
+        verbose_name_plural = "Registros de lubrificadores"
+
+    def __str__(self):
+        return (
+            f"{self.lubrificador.nome} - "
+            f"{self.data_hora:%d/%m/%Y %H:%M}"
+        )
+
+    @property
+    def quantidade_bicos_com_falha(self):
+        total = self.quantidade_total_bicos
+        funcionais = self.quantidade_bicos_funcionais
+
+        if total is None or funcionais is None:
+            return None
+
+        return total - funcionais
+
+    @property
+    def percentual_bicos_funcionais(self):
+        total = self.quantidade_total_bicos
+        funcionais = self.quantidade_bicos_funcionais
+
+        if total is None or funcionais is None:
+            return None
+
+        if total == 0:
+            return 0
+
+        return round((funcionais / total) * 100, 1)
+
+    def clean(self):
+        errors = {}
+
+        total = self.quantidade_total_bicos
+        funcionais = self.quantidade_bicos_funcionais
+
+        if total is None and funcionais is not None:
+            errors["quantidade_total_bicos"] = (
+                "Informe também a quantidade total de bicos."
+            )
+
+        if total is not None and funcionais is None:
+            errors["quantidade_bicos_funcionais"] = (
+                "Informe também a quantidade de bicos funcionais."
+            )
+
+        if (
+            total is not None
+            and funcionais is not None
+            and funcionais > total
+        ):
+            errors["quantidade_bicos_funcionais"] = (
+                "A quantidade de bicos funcionais não pode ser "
+                "maior que a quantidade total."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class SetorInspecao(models.Model):
