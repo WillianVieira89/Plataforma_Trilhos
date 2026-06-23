@@ -27,6 +27,11 @@ urlpatterns = [
     path("trocas-trilho/nova/", views.nova_troca_trilho, name="nova_troca_trilho"),
     path("trocas-trilho/<int:pk>/editar/", views.editar_troca_trilho, name="editar_troca_trilho"),
     
+    path(
+        "lubrificadores/dashboard/",
+        views.dashboard_lubrificadores,
+        name="dashboard_lubrificadores",
+    ),
     path("lubrificadores/", views.listar_lubrificadores, name="listar_lubrificadores"),
     path("lubrificadores/novo/", views.novo_lubrificador, name="novo_lubrificador"),
     path("lubrificadores/<int:pk>/editar/", views.editar_lubrificador, name="editar_lubrificador"),
