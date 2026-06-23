@@ -1,4 +1,6 @@
 from django.contrib import messages
+from django.db import transaction
+from django.db.models import OuterRef, Subquery
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import never_cache
@@ -12,6 +14,8 @@ from .forms import (
     OcorrenciaInspecaoFormSet,
     OcorrenciaInspecaoTrechoForm,
     TrocaTrilhoForm,
+    RegistroLubrificadorForm,
+    LubrificadorCadastroForm,
 )
 from .models import (
     Inspecao,
@@ -27,6 +31,7 @@ from .models import (
     CriticidadeChoices,
     Lubrificador,
     StatusLubrificadorChoices,
+    RegistroLubrificador,
 )
 
 MT_TRECHO_INICIAL = 1
@@ -544,29 +549,229 @@ def api_itens_inspecao(request):
         "itens": list(itens)
     })
 
-
 def listar_lubrificadores(request):
-    lubrificadores = Lubrificador.objects.all().order_by("nome")
+    filtro_via = request.GET.get("via", "").strip()
+    filtro_status = request.GET.get("status", "").strip()
 
-    filtro_via    = request.GET.get("via", "")
-    filtro_status = request.GET.get("status", "")
+    ultimo_registro = (
+        RegistroLubrificador.objects
+        .filter(lubrificador_id=OuterRef("pk"))
+        .order_by("-data_hora", "-criado_em")
+    )
+
+    lubrificadores = (
+        Lubrificador.objects
+        .annotate(
+            ultimo_registro_id=Subquery(
+                ultimo_registro.values("pk")[:1]
+            )
+        )
+        .order_by("nome")
+    )
 
     if filtro_via:
-        lubrificadores = lubrificadores.filter(via=filtro_via)
-    if filtro_status:
-        lubrificadores = lubrificadores.filter(status_operacional=filtro_status)
+        lubrificadores = lubrificadores.filter(
+            via=filtro_via
+        )
 
-    return render(request, "desgaste/lubrificadores/listar_lubrificadores.html", {
-        "lubrificadores": lubrificadores,
-        "filtro_via": filtro_via,
-        "filtro_status": filtro_status,
-        "status_choices": StatusLubrificadorChoices.choices,
-    })
+    if filtro_status:
+        lubrificadores = lubrificadores.filter(
+            status_operacional=filtro_status
+        )
+
+    lubrificadores = list(lubrificadores)
+
+    ids_ultimos_registros = [
+        lubrificador.ultimo_registro_id
+        for lubrificador in lubrificadores
+        if lubrificador.ultimo_registro_id
+    ]
+
+    registros_por_id = (
+        RegistroLubrificador.objects
+        .filter(pk__in=ids_ultimos_registros)
+        .select_related("registrado_por")
+        .in_bulk()
+    )
+
+    for lubrificador in lubrificadores:
+        lubrificador.ultimo_registro = registros_por_id.get(
+            lubrificador.ultimo_registro_id
+        )
+
+    return render(
+        request,
+        "desgaste/lubrificadores/listar_lubrificadores.html",
+        {
+            "lubrificadores": lubrificadores,
+            "filtro_via": filtro_via,
+            "filtro_status": filtro_status,
+            "status_choices": StatusLubrificadorChoices.choices,
+        },
+    )
+
+
+def registrar_atualizacao_lubrificador(request, pk):
+    lubrificador = get_object_or_404(
+        Lubrificador,
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        form = RegistroLubrificadorForm(request.POST)
+
+        if form.is_valid():
+            with transaction.atomic():
+                registro = form.save(commit=False)
+                registro.lubrificador = lubrificador
+
+                if request.user.is_authenticated:
+                    registro.registrado_por = request.user
+
+                registro.save()
+
+                lubrificador.status_operacional = (
+                    registro.status_operacional
+                )
+                lubrificador.save(
+                    update_fields=["status_operacional"]
+                )
+
+            messages.success(
+                request,
+                (
+                    f"Atualização do {lubrificador.nome} "
+                    "registrada com sucesso."
+                ),
+            )
+
+            return redirect("listar_lubrificadores")
+    else:
+        form = RegistroLubrificadorForm(
+            initial={
+                "status_operacional": (
+                    lubrificador.status_operacional
+                ),
+            }
+        )
+
+    return render(
+        request,
+        (
+            "desgaste/lubrificadores/"
+            "form_registro_lubrificador.html"
+        ),
+        {
+            "form": form,
+            "lubrificador": lubrificador,
+            "titulo": (
+                f"Registrar atualização — "
+                f"{lubrificador.nome}"
+            ),
+        },
+    )
+
+
+def historico_lubrificador(request, pk):
+    lubrificador = get_object_or_404(
+        Lubrificador,
+        pk=pk,
+    )
+
+    registros = (
+        lubrificador.registros
+        .select_related("registrado_por")
+        .order_by("-data_hora", "-criado_em")
+    )
+
+    return render(
+        request,
+        "desgaste/lubrificadores/historico_lubrificador.html",
+        {
+            "lubrificador": lubrificador,
+            "registros": registros,
+        },
+    )
 
 
 def novo_lubrificador(request):
-    return HttpResponse("Em construção — Fase 2")
+    if not request.user.is_staff:
+        messages.error(
+            request,
+            (
+                "A criação de lubrificadores é restrita "
+                "aos administradores."
+            ),
+        )
+        return redirect("listar_lubrificadores")
+
+    if request.method == "POST":
+        form = LubrificadorCadastroForm(request.POST)
+
+        if form.is_valid():
+            lubrificador = form.save()
+
+            messages.success(
+                request,
+                f"{lubrificador.nome} cadastrado com sucesso.",
+            )
+            return redirect("listar_lubrificadores")
+    else:
+        form = LubrificadorCadastroForm()
+
+    return render(
+        request,
+        "desgaste/lubrificadores/form_lubrificador.html",
+        {
+            "form": form,
+            "titulo": "Novo lubrificador",
+        },
+    )
 
 
 def editar_lubrificador(request, pk):
-    return HttpResponse("Em construção — Fase 2")
+    if not request.user.is_staff:
+        messages.error(
+            request,
+            (
+                "A edição cadastral é restrita "
+                "aos administradores."
+            ),
+        )
+        return redirect("listar_lubrificadores")
+
+    lubrificador = get_object_or_404(
+        Lubrificador,
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        form = LubrificadorCadastroForm(
+            request.POST,
+            instance=lubrificador,
+        )
+
+        if form.is_valid():
+            form.save()
+
+            messages.success(
+                request,
+                f"Cadastro do {lubrificador.nome} atualizado.",
+            )
+            return redirect("listar_lubrificadores")
+    else:
+        form = LubrificadorCadastroForm(
+            instance=lubrificador,
+        )
+
+    return render(
+        request,
+        "desgaste/lubrificadores/form_lubrificador.html",
+        {
+            "form": form,
+            "lubrificador": lubrificador,
+            "titulo": (
+                f"Editar cadastro — {lubrificador.nome}"
+            ),
+        },
+    )

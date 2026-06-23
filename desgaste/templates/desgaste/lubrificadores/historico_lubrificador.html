@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico — {{ lubrificador.nome }}{% endblock %}
+
+{% block page_actions %}
+<div class="action-bar">
+    <div class="action-bar-left">
+        <a href="{% url 'listar_lubrificadores' %}" class="btn btn-ghost">
+            Voltar
+        </a>
+    </div>
+
+    <div class="action-bar-right">
+        <a
+            href="{% url 'registrar_atualizacao_lubrificador' lubrificador.pk %}"
+            class="btn btn-success"
+        >
+            Registrar atualização
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+    .registro-card {
+        margin-bottom: 20px;
+    }
+
+    .registro-topo {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+
+    .registro-data {
+        color: var(--muted);
+        font-size: 14px;
+    }
+
+    .registro-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(180px, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+    }
+
+    .registro-item {
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #f9fafb;
+    }
+
+    .registro-label {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    .registro-value {
+        font-weight: 700;
+    }
+
+    .registro-texto {
+        margin-top: 16px;
+        padding: 14px;
+        border-radius: 10px;
+        background: #f8fafc;
+    }
+
+    .registro-texto h4 {
+        margin: 0 0 8px;
+    }
+
+    .badge-status {
+        display: inline-block;
+        padding: 5px 11px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .badge-OPERANTE {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-OPERANTE_RESTRICAO {
+        background: #ffedd5;
+        color: #9a3412;
+    }
+
+    .badge-MANUTENCAO {
+        background: #fef9c3;
+        color: #854d0e;
+    }
+
+    .badge-INOPERANTE {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    @media (max-width: 900px) {
+        .registro-grid {
+            grid-template-columns: repeat(2, minmax(180px, 1fr));
+        }
+    }
+
+    @media (max-width: 620px) {
+        .registro-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            Histórico — {{ lubrificador.nome }}
+        </h1>
+
+        <p class="page-subtitle">
+            {{ lubrificador.get_via_display|default:"Via não informada" }}
+            •
+            {{ lubrificador.mt|default:"MT não informado" }}
+        </p>
+    </div>
+</div>
+
+{% if registros %}
+    {% for registro in registros %}
+    <div class="card registro-card">
+        <div class="card-body">
+            <div class="registro-topo">
+                <div>
+                    <span class="badge-status badge-{{ registro.status_operacional }}">
+                        {{ registro.get_status_operacional_display }}
+                    </span>
+                </div>
+
+                <div class="registro-data">
+                    {{ registro.data_hora|date:"d/m/Y H:i" }}
+                    {% if registro.registrado_por %}
+                        •
+                        {% firstof registro.registrado_por.get_full_name registro.registrado_por.username %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="registro-grid">
+                <div class="registro-item">
+                    <span class="registro-label">Nível de graxa</span>
+                    <span class="registro-value">
+                        {{ registro.nivel_graxa_percentual }}%
+                    </span>
+                </div>
+
+                <div class="registro-item">
+                    <span class="registro-label">Alimentação elétrica</span>
+                    <span class="registro-value">
+                        {{ registro.get_alimentacao_eletrica_display }}
+                    </span>
+                </div>
+
+                <div class="registro-item">
+                    <span class="registro-label">Tensão medida</span>
+                    <span class="registro-value">
+                        {% if registro.tensao_alimentacao is not None %}
+                            {{ registro.tensao_alimentacao }} V
+                        {% else %}
+                            Não informada
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="registro-item">
+                    <span class="registro-label">Controladora</span>
+                    <span class="registro-value">
+                        {{ registro.get_controladora_display }}
+                    </span>
+                </div>
+
+                <div class="registro-item">
+                    <span class="registro-label">Motor</span>
+                    <span class="registro-value">
+                        {{ registro.get_motor_display }}
+                    </span>
+                </div>
+
+                <div class="registro-item">
+                    <span class="registro-label">Régua</span>
+                    <span class="registro-value">
+                        {{ registro.get_integridade_regua_display }}
+                    </span>
+                </div>
+
+                <div class="registro-item">
+                    <span class="registro-label">Bicos funcionais</span>
+                    <span class="registro-value">
+                        {% if registro.quantidade_total_bicos is not None %}
+                            {{ registro.quantidade_bicos_funcionais }}/{{ registro.quantidade_total_bicos }}
+                        {% else %}
+                            Não informados
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="registro-item">
+                    <span class="registro-label">Bicos com falha</span>
+                    <span class="registro-value">
+                        {% if registro.quantidade_bicos_com_falha is not None %}
+                            {{ registro.quantidade_bicos_com_falha }}
+                        {% else %}
+                            Não informado
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="registro-item">
+                    <span class="registro-label">Sensor de indução</span>
+                    <span class="registro-value">
+                        {{ registro.get_sensor_inducao_display }}
+                    </span>
+                </div>
+            </div>
+
+            {% if registro.falha_encontrada %}
+            <div class="registro-texto">
+                <h4>Falha ou condição encontrada</h4>
+                {{ registro.falha_encontrada|linebreaksbr }}
+            </div>
+            {% endif %}
+
+            {% if registro.servico_executado %}
+            <div class="registro-texto">
+                <h4>Serviço executado</h4>
+                {{ registro.servico_executado|linebreaksbr }}
+            </div>
+            {% endif %}
+
+            {% if registro.observacoes %}
+            <div class="registro-texto">
+                <h4>Observações</h4>
+                {{ registro.observacoes|linebreaksbr }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="empty-state">
+    <p>Este lubrificador ainda não possui inspeções registradas.</p>
+
+    <a
+        href="{% url 'registrar_atualizacao_lubrificador' lubrificador.pk %}"
+        class="btn btn-success"
+    >
+        Registrar primeira atualização
+    </a>
+</div>
+{% endif %}
+{% endblock %}
