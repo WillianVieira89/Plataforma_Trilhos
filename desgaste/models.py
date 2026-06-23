@@ -312,7 +312,7 @@ class CriticidadeChoices(models.TextChoices):
 
 
 class StatusLubrificadorChoices(models.TextChoices):
-    OPERANTE = "OPERANTE", "Operante"
+    OPERANTE = "OPERANTE", "Operacional"
     OPERANTE_RESTRICAO = (
         "OPERANTE_RESTRICAO",
         "Operante com restrição",
@@ -327,14 +327,19 @@ class TipoAtuacaoLubrificadorChoices(models.TextChoices):
 
 
 class ResultadoInspecaoChoices(models.TextChoices):
-    CONFORME = "CONFORME", "Conforme"
-    COM_ANOMALIA = "COM_ANOMALIA", "Com anomalia"
+    CONFORME = "CONFORME", "OK"
+    COM_ANOMALIA = "COM_ANOMALIA", "NOK"
 
 
 class ResultadoCorretivaChoices(models.TextChoices):
     RESOLVIDA = "RESOLVIDA", "Resolvida"
     PARCIAL = "PARCIAL", "Resolvida parcialmente"
     NAO_RESOLVIDA = "NAO_RESOLVIDA", "Não resolvida"
+
+
+class SituacaoOrdemCorretivaChoices(models.TextChoices):
+    EXECUTADA = "EXECUTADA", "Executada"
+    PARCIAL = "PARCIAL", "Executada parcialmente"
 
 
 class SituacaoPendenciaChoices(models.TextChoices):
@@ -710,6 +715,13 @@ class OrdemCorretivaLubrificador(models.Model):
     numero = models.CharField(
         max_length=50,
         verbose_name="Número da ordem corretiva",
+    )
+
+    situacao = models.CharField(
+        max_length=20,
+        choices=SituacaoOrdemCorretivaChoices.choices,
+        default=SituacaoOrdemCorretivaChoices.EXECUTADA,
+        verbose_name="Status da ordem",
     )
 
     class Meta:

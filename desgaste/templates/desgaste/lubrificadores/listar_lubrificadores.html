@@ -378,6 +378,29 @@
                 </div>
 
                 <div class="field">
+                    <label for="filtro-lubrificador">
+                        Lubrificador
+                    </label>
+
+                    <input
+                        type="search"
+                        id="filtro-lubrificador"
+                        name="lubrificador"
+                        class="form-control"
+                        value="{{ filtro_lubrificador }}"
+                        list="lista-lubrificadores"
+                        placeholder="Digite o nome do lubrificador"
+                        autocomplete="off"
+                    >
+
+                    <datalist id="lista-lubrificadores">
+                        {% for nome in opcoes_lubrificadores %}
+                        <option value="{{ nome }}"></option>
+                        {% endfor %}
+                    </datalist>
+                </div>
+
+                <div class="field">
                     <label for="filtro-status">Status</label>
 
                     <select

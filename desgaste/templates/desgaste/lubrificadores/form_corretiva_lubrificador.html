@@ -94,7 +94,10 @@
 
     .ordem-row {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns:
+            minmax(0, 1fr)
+            minmax(220px, 0.7fr)
+            auto;
         gap: 10px;
         align-items: end;
         padding: 14px;
@@ -213,7 +216,7 @@
     {% endif %}
 
     <div class="card">
-        <div class="card-header">Resultado da corretiva</div>
+        <div class="card-header">Dados da corretiva</div>
 
         <div class="card-body">
             <div class="grid-2">
@@ -225,13 +228,6 @@
                     {% endfor %}
                 </div>
 
-                <div class="field">
-                    {{ form.resultado_corretiva.label_tag }}
-                    {{ form.resultado_corretiva }}
-                    {% for error in form.resultado_corretiva.errors %}
-                    <div class="alert-danger">{{ error }}</div>
-                    {% endfor %}
-                </div>
             </div>
 
             <div class="grid-2">
@@ -326,11 +322,23 @@
 
             <div class="grid-2">
                 <div class="field">
-                    {{ form.quantidade_total_bicos.label_tag }}
-                    {{ form.quantidade_total_bicos }}
-                    {% for error in form.quantidade_total_bicos.errors %}
-                    <div class="alert-danger">{{ error }}</div>
-                    {% endfor %}
+                    <label for="total-bicos-fixo">
+                        Quantidade total de bicos
+                    </label>
+
+                    <input
+                        type="text"
+                        id="total-bicos-fixo"
+                        class="form-control"
+                        value="8 bicos — quantidade fixa"
+                        readonly
+                    >
+
+                    <input
+                        type="hidden"
+                        id="id_quantidade_total_bicos"
+                        value="8"
+                    >
                 </div>
 
                 <div class="field">
@@ -365,9 +373,22 @@
 
         <div class="card-body">
             <p class="section-description">
-                Informe pelo menos uma ordem. Utilize o botão para
-                adicionar outras ordens relacionadas à mesma corretiva.
+                Foram identificadas
+                <strong>{{ quantidade_ordens }}</strong>
+                falha{{ quantidade_ordens|pluralize }} técnica{{ quantidade_ordens|pluralize }}.
+                Informe pelo menos
+                <strong>{{ quantidade_ordens }}</strong>
+                ordem{{ quantidade_ordens|pluralize:"em,ens" }}
+                corretiva{{ quantidade_ordens|pluralize }}.
             </p>
+
+            {% if falhas_inspecao %}
+            <ul>
+                {% for falha in falhas_inspecao %}
+                <li>{{ falha }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
 
             {{ ordens_formset.management_form }}
 
@@ -389,6 +410,15 @@
                         {{ ordem_form.numero }}
 
                         {% for error in ordem_form.numero.errors %}
+                        <div class="alert-danger">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="field">
+                        {{ ordem_form.situacao.label_tag }}
+                        {{ ordem_form.situacao }}
+
+                        {% for error in ordem_form.situacao.errors %}
                         <div class="alert-danger">{{ error }}</div>
                         {% endfor %}
                     </div>
@@ -426,6 +456,11 @@
                     <div class="field">
                         {{ ordens_formset.empty_form.numero.label_tag }}
                         {{ ordens_formset.empty_form.numero }}
+                    </div>
+
+                    <div class="field">
+                        {{ ordens_formset.empty_form.situacao.label_tag }}
+                        {{ ordens_formset.empty_form.situacao }}
                     </div>
 
                     <div class="ordem-delete-control">
