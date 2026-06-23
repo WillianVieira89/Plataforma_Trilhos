@@ -20,6 +20,14 @@ from .models import (
     TrilhoChoices,
     Lubrificador,
     RegistroLubrificador,
+    OrdemCorretivaLubrificador,
+    ResultadoInspecaoChoices,
+    StatusLubrificadorChoices,
+    AlimentacaoEletricaChoices,
+    ControladoraChoices,
+    MotorLubrificadorChoices,
+    IntegridadeReguaChoices,
+    SensorInducaoChoices,
 )
 
 
@@ -571,25 +579,10 @@ class TrocaTrilhoForm(forms.ModelForm):
         return cleaned_data
 
 
-class RegistroLubrificadorForm(forms.ModelForm):
+class BaseAtuacaoLubrificadorForm(forms.ModelForm):
     class Meta:
         model = RegistroLubrificador
-        fields = [
-            "data_hora",
-            "status_operacional",
-            "nivel_graxa_percentual",
-            "alimentacao_eletrica",
-            "tensao_alimentacao",
-            "controladora",
-            "motor",
-            "integridade_regua",
-            "quantidade_total_bicos",
-            "quantidade_bicos_funcionais",
-            "sensor_inducao",
-            "falha_encontrada",
-            "servico_executado",
-            "observacoes",
-        ]
+        fields = []
 
         widgets = {
             "data_hora": forms.DateTimeInput(
@@ -598,6 +591,12 @@ class RegistroLubrificadorForm(forms.ModelForm):
                     "type": "datetime-local",
                     "class": "form-control",
                 },
+            ),
+            "resultado_inspecao": forms.Select(
+                attrs={"class": "form-control"}
+            ),
+            "resultado_corretiva": forms.Select(
+                attrs={"class": "form-control"}
             ),
             "status_operacional": forms.Select(
                 attrs={"class": "form-control"}
@@ -655,15 +654,17 @@ class RegistroLubrificadorForm(forms.ModelForm):
                     "class": "form-control",
                     "rows": 3,
                     "placeholder": (
-                        "Descreva falhas, defeitos ou condições encontradas."
+                        "Descreva a anomalia ou condição encontrada."
                     ),
                 }
             ),
             "servico_executado": forms.Textarea(
                 attrs={
                     "class": "form-control",
-                    "rows": 3,
-                    "placeholder": "Descreva o serviço executado.",
+                    "rows": 4,
+                    "placeholder": (
+                        "Descreva detalhadamente o serviço executado."
+                    ),
                 }
             ),
             "observacoes": forms.Textarea(
@@ -719,6 +720,267 @@ class RegistroLubrificadorForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+
+class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
+    class Meta(BaseAtuacaoLubrificadorForm.Meta):
+        fields = [
+            "data_hora",
+            "resultado_inspecao",
+            "status_operacional",
+            "nivel_graxa_percentual",
+            "alimentacao_eletrica",
+            "tensao_alimentacao",
+            "controladora",
+            "motor",
+            "integridade_regua",
+            "quantidade_total_bicos",
+            "quantidade_bicos_funcionais",
+            "sensor_inducao",
+            "observacoes",
+        ]
+
+    def identificar_nao_conformidades(self, cleaned_data):
+        verificacoes = [
+            (
+                "Status operacional",
+                "status_operacional",
+                StatusLubrificadorChoices.OPERANTE,
+                dict(StatusLubrificadorChoices.choices),
+            ),
+            (
+                "Alimentação elétrica",
+                "alimentacao_eletrica",
+                AlimentacaoEletricaChoices.NORMAL,
+                dict(AlimentacaoEletricaChoices.choices),
+            ),
+            (
+                "Controladora",
+                "controladora",
+                ControladoraChoices.LIGADA,
+                dict(ControladoraChoices.choices),
+            ),
+            (
+                "Motor",
+                "motor",
+                MotorLubrificadorChoices.FUNCIONANDO,
+                dict(MotorLubrificadorChoices.choices),
+            ),
+            (
+                "Régua",
+                "integridade_regua",
+                IntegridadeReguaChoices.INTEGRA,
+                dict(IntegridadeReguaChoices.choices),
+            ),
+            (
+                "Sensor de indução",
+                "sensor_inducao",
+                SensorInducaoChoices.FUNCIONANDO,
+                dict(SensorInducaoChoices.choices),
+            ),
+        ]
+
+        nao_conformidades = []
+
+        for titulo, campo, valor_normal, opcoes in verificacoes:
+            valor = cleaned_data.get(campo)
+
+            if valor and valor != valor_normal:
+                descricao = opcoes.get(valor, valor)
+
+                nao_conformidades.append(
+                    f"{titulo}: {descricao}"
+                )
+
+        total = cleaned_data.get("quantidade_total_bicos")
+        funcionais = cleaned_data.get(
+            "quantidade_bicos_funcionais"
+        )
+
+        if (
+            total is not None
+            and funcionais is not None
+            and funcionais < total
+        ):
+            quantidade_falhas = total - funcionais
+
+            nao_conformidades.append(
+                (
+                    f"Bicos com falha: {quantidade_falhas} "
+                    f"de {total}"
+                )
+            )
+
+        return nao_conformidades
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        resultado = cleaned_data.get("resultado_inspecao")
+
+        nao_conformidades = self.identificar_nao_conformidades(
+            cleaned_data
+        )
+
+        self.nao_conformidades_identificadas = (
+            nao_conformidades
+        )
+
+        if (
+            resultado == ResultadoInspecaoChoices.COM_ANOMALIA
+            and not nao_conformidades
+        ):
+            self.add_error(
+                "resultado_inspecao",
+                (
+                    "Para registrar uma anomalia, selecione ao "
+                    "menos uma condição diferente do funcionamento "
+                    "normal nos campos técnicos."
+                ),
+            )
+
+        if (
+            resultado == ResultadoInspecaoChoices.CONFORME
+            and nao_conformidades
+        ):
+            self.add_error(
+                "resultado_inspecao",
+                (
+                    "O resultado não pode ser Conforme porque foram "
+                    "identificadas as seguintes condições: "
+                    + "; ".join(nao_conformidades)
+                ),
+            )
+
+        if (
+            resultado == ResultadoInspecaoChoices.COM_ANOMALIA
+            and nao_conformidades
+        ):
+            self.instance.falha_encontrada = "; ".join(
+                nao_conformidades
+            )
+        else:
+            self.instance.falha_encontrada = ""
+
+        return cleaned_data
+
+
+class CorretivaLubrificadorForm(BaseAtuacaoLubrificadorForm):
+    class Meta(BaseAtuacaoLubrificadorForm.Meta):
+        fields = [
+            "data_hora",
+            "resultado_corretiva",
+            "status_operacional",
+            "nivel_graxa_percentual",
+            "alimentacao_eletrica",
+            "tensao_alimentacao",
+            "controladora",
+            "motor",
+            "integridade_regua",
+            "quantidade_total_bicos",
+            "quantidade_bicos_funcionais",
+            "sensor_inducao",
+            "servico_executado",
+            "observacoes",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["servico_executado"].required = True
+
+    def clean_servico_executado(self):
+        servico = str(
+            self.cleaned_data.get("servico_executado") or ""
+        ).strip()
+
+        if not servico:
+            raise forms.ValidationError(
+                "Descreva o serviço executado na manutenção corretiva."
+            )
+
+        return servico
+
+
+class OrdemCorretivaLubrificadorForm(forms.ModelForm):
+    class Meta:
+        model = OrdemCorretivaLubrificador
+        fields = ["numero"]
+
+        widgets = {
+            "numero": forms.TextInput(
+                attrs={
+                    "class": "form-control ordem-corretiva",
+                    "placeholder": "Ex.: 54109217",
+                    "autocomplete": "off",
+                }
+            ),
+        }
+
+    def clean_numero(self):
+        numero = str(
+            self.cleaned_data.get("numero") or ""
+        ).strip().upper()
+
+        if not numero:
+            raise forms.ValidationError(
+                "Informe o número da ordem corretiva."
+            )
+
+        return numero
+
+
+class OrdemCorretivaLubrificadorBaseFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+
+        if any(self.errors):
+            return
+
+        numeros = []
+        quantidade_valida = 0
+
+        for form in self.forms:
+            if not hasattr(form, "cleaned_data"):
+                continue
+
+            dados = form.cleaned_data
+
+            if not dados or dados.get("DELETE"):
+                continue
+
+            numero = str(dados.get("numero") or "").strip().upper()
+
+            if not numero:
+                continue
+
+            quantidade_valida += 1
+
+            if numero in numeros:
+                raise forms.ValidationError(
+                    f"A ordem corretiva {numero} foi informada mais de uma vez."
+                )
+
+            numeros.append(numero)
+
+        if quantidade_valida == 0:
+            raise forms.ValidationError(
+                "Informe pelo menos uma ordem corretiva."
+            )
+
+
+OrdemCorretivaLubrificadorFormSet = inlineformset_factory(
+    RegistroLubrificador,
+    OrdemCorretivaLubrificador,
+    form=OrdemCorretivaLubrificadorForm,
+    formset=OrdemCorretivaLubrificadorBaseFormSet,
+    extra=1,
+    can_delete=True,
+)
+
+
+# Compatibilidade temporária com a view anterior.
+RegistroLubrificadorForm = InspecaoLubrificadorForm
 
 
 class LubrificadorCadastroForm(forms.ModelForm):
