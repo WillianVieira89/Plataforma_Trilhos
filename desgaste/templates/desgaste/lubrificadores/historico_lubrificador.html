@@ -228,6 +228,26 @@
                 </div>
             </div>
 
+            {% if registro.tipo_atuacao == "CORRETIVA" %}
+                {% with ordens=registro.ordens_corretivas.all %}
+                    {% if ordens %}
+                    <div class="registro-texto">
+                        <h4>Ordens corretivas</h4>
+
+                        <ul style="margin: 0; padding-left: 20px;">
+                            {% for ordem in ordens %}
+                            <li>
+                                <strong>{{ ordem.numero }}</strong>
+                                —
+                                {{ ordem.get_situacao_display }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
+
             {% if registro.falha_encontrada %}
             <div class="registro-texto">
                 <h4>Falha ou condição encontrada</h4>

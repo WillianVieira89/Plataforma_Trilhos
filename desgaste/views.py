@@ -34,6 +34,7 @@ from .models import (
     Lubrificador,
     StatusLubrificadorChoices,
     RegistroLubrificador,
+    OrdemCorretivaLubrificador,
     TipoAtuacaoLubrificadorChoices,
     ResultadoInspecaoChoices,
     ResultadoCorretivaChoices,
@@ -788,10 +789,74 @@ def registrar_corretiva_lubrificador(
         if falha.strip()
     ]
 
-    quantidade_ordens = max(
-        1,
-        len(falhas_inspecao),
+    ordens_historicas = (
+        OrdemCorretivaLubrificador.objects
+        .filter(
+            registro_corretiva__inspecao_origem=(
+                inspecao_origem
+            )
+        )
+        .select_related("registro_corretiva")
+        .order_by(
+            "-registro_corretiva__data_hora",
+            "-registro_corretiva__criado_em",
+            "-pk",
+        )
     )
+
+    dados_ordens_anteriores = {}
+
+    for ordem in ordens_historicas:
+        numero = str(
+            ordem.numero or ""
+        ).strip().upper()
+
+        if numero and numero not in dados_ordens_anteriores:
+            dados_ordens_anteriores[numero] = {
+                "situacao": ordem.situacao,
+                "falha": ordem.falha_vinculada,
+            }
+
+    ordens_parciais_anteriores = [
+        {
+            "numero": numero,
+            "falha": dados["falha"],
+        }
+        for numero, dados
+        in sorted(dados_ordens_anteriores.items())
+        if dados["situacao"]
+        == SituacaoOrdemCorretivaChoices.PARCIAL
+    ]
+
+    primeira_corretiva = not dados_ordens_anteriores
+
+    if primeira_corretiva:
+        falhas_pendentes = falhas_inspecao
+        quantidade_ordens = max(
+            1,
+            len(falhas_pendentes),
+        )
+        ordens_iniciais = []
+    else:
+        falhas_pendentes = [
+            item["falha"]
+            for item in ordens_parciais_anteriores
+            if item["falha"]
+        ]
+
+        quantidade_ordens = len(
+            ordens_parciais_anteriores
+        )
+
+        ordens_iniciais = [
+            {
+                "numero": item["numero"],
+                "situacao": (
+                    SituacaoOrdemCorretivaChoices.PARCIAL
+                ),
+            }
+            for item in ordens_parciais_anteriores
+        ]
 
     if not inspecao_origem.pendencia_aberta:
         messages.info(
@@ -863,6 +928,7 @@ def registrar_corretiva_lubrificador(
             instance=instancia,
             prefix="ordens",
             quantidade_minima=quantidade_ordens,
+            initial=ordens_iniciais,
         )
 
         if form.is_valid() and ordens_formset.is_valid():
@@ -873,14 +939,24 @@ def registrar_corretiva_lubrificador(
                     TipoAtuacaoLubrificadorChoices.CORRETIVA
                 )
                 registro.inspecao_origem = inspecao_origem
-                registro.falha_encontrada = (
-                    inspecao_origem.falha_encontrada
-                )
 
                 if request.user.is_authenticated:
                     registro.registrado_por = request.user
 
-                situacoes_ordens = []
+                estados_ordens = {
+                    numero: dados["situacao"]
+                    for numero, dados
+                    in dados_ordens_anteriores.items()
+                }
+
+                falhas_por_ordem = {
+                    numero: dados["falha"]
+                    for numero, dados
+                    in dados_ordens_anteriores.items()
+                }
+
+                ordens_para_salvar = []
+                indice_falha = 0
 
                 for ordem_form in ordens_formset.forms:
                     dados = getattr(
@@ -889,25 +965,61 @@ def registrar_corretiva_lubrificador(
                         {},
                     )
 
-                    if not dados:
+                    if not dados or dados.get("DELETE"):
                         continue
 
-                    if dados.get("DELETE"):
+                    numero = str(
+                        dados.get("numero") or ""
+                    ).strip().upper()
+
+                    if not numero:
                         continue
 
-                    if not dados.get("numero"):
-                        continue
+                    if primeira_corretiva:
+                        if indice_falha < len(falhas_inspecao):
+                            falha_vinculada = (
+                                falhas_inspecao[indice_falha]
+                            )
+                        else:
+                            falha_vinculada = ""
 
-                    situacoes_ordens.append(
-                        dados.get("situacao")
+                        indice_falha += 1
+                    else:
+                        falha_vinculada = (
+                            falhas_por_ordem.get(numero, "")
+                        )
+
+                    estados_ordens[numero] = dados.get(
+                        "situacao"
                     )
 
+                    falhas_por_ordem[numero] = falha_vinculada
+
+                    ordens_para_salvar.append(
+                        (ordem_form, falha_vinculada)
+                    )
+
+                falhas_pendentes_apos_corretiva = [
+                    falhas_por_ordem.get(numero, "")
+                    for numero, situacao
+                    in estados_ordens.items()
+                    if (
+                        situacao
+                        == SituacaoOrdemCorretivaChoices.PARCIAL
+                        and falhas_por_ordem.get(numero, "")
+                    )
+                ]
+
+                registro.falha_encontrada = "; ".join(
+                    falhas_pendentes_apos_corretiva
+                )
+
                 todas_executadas = (
-                    bool(situacoes_ordens)
+                    bool(estados_ordens)
                     and all(
                         situacao
                         == SituacaoOrdemCorretivaChoices.EXECUTADA
-                        for situacao in situacoes_ordens
+                        for situacao in estados_ordens.values()
                     )
                 )
 
@@ -971,7 +1083,12 @@ def registrar_corretiva_lubrificador(
                 registro.save()
 
                 ordens_formset.instance = registro
-                ordens_formset.save()
+
+                for ordem_form, falha_vinculada in ordens_para_salvar:
+                    ordem = ordem_form.save(commit=False)
+                    ordem.registro_corretiva = registro
+                    ordem.falha_vinculada = falha_vinculada
+                    ordem.save()
 
                 inspecao_origem.save(
                     update_fields=["situacao_pendencia"]
@@ -1015,6 +1132,7 @@ def registrar_corretiva_lubrificador(
             instance=instancia,
             prefix="ordens",
             quantidade_minima=quantidade_ordens,
+            initial=ordens_iniciais,
         )
 
     return render(
@@ -1026,8 +1144,12 @@ def registrar_corretiva_lubrificador(
         {
             "form": form,
             "ordens_formset": ordens_formset,
-            "falhas_inspecao": falhas_inspecao,
+            "falhas_inspecao": falhas_pendentes,
             "quantidade_ordens": quantidade_ordens,
+            "primeira_corretiva": primeira_corretiva,
+            "ordens_parciais_anteriores": (
+                ordens_parciais_anteriores
+            ),
             "lubrificador": lubrificador,
             "inspecao_origem": inspecao_origem,
             "titulo": (
