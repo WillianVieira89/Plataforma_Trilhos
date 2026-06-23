@@ -323,7 +323,7 @@ class StatusLubrificadorChoices(models.TextChoices):
 
 class TipoAtuacaoLubrificadorChoices(models.TextChoices):
     INSPECAO = "INSPECAO", "Inspeção"
-    CORRETIVA = "CORRETIVA", "Manutenção corretiva"
+    CORRETIVA = "CORRETIVA", "Execução corretiva"
 
 
 class ResultadoInspecaoChoices(models.TextChoices):
@@ -333,7 +333,7 @@ class ResultadoInspecaoChoices(models.TextChoices):
 
 class ResultadoCorretivaChoices(models.TextChoices):
     RESOLVIDA = "RESOLVIDA", "Resolvida"
-    PARCIAL = "PARCIAL", "Resolvida parcialmente"
+    PARCIAL = "PARCIAL", "Executada parcialmente"
     NAO_RESOLVIDA = "NAO_RESOLVIDA", "Não resolvida"
 
 
@@ -345,6 +345,73 @@ class SituacaoPendenciaChoices(models.TextChoices):
     )
     EM_TRATAMENTO = "EM_TRATAMENTO", "Em tratamento"
     CONCLUIDA = "CONCLUIDA", "Concluída"
+
+
+class SituacaoOrdemCorretivaChoices(models.TextChoices):
+    AGUARDANDO = "AGUARDANDO", "Aguardando execução"
+    EM_ANDAMENTO = "EM_ANDAMENTO", "Em andamento"
+    PARCIAL = "PARCIAL", "Executada parcialmente"
+    CONCLUIDA = "CONCLUIDA", "Concluída"
+    NAO_RESOLVIDA = "NAO_RESOLVIDA", "Não resolvida"
+
+
+class FalhaLubrificadorChoices(models.TextChoices):
+    ALIMENTACAO_AUSENTE = (
+        "ALIMENTACAO_AUSENTE",
+        "Alimentação elétrica ausente",
+    )
+    ALIMENTACAO_INSTAVEL = (
+        "ALIMENTACAO_INSTAVEL",
+        "Alimentação elétrica instável",
+    )
+    CONTROLADORA_DESLIGADA = (
+        "CONTROLADORA_DESLIGADA",
+        "Controladora desligada",
+    )
+    CONTROLADORA_COM_FALHA = (
+        "CONTROLADORA_COM_FALHA",
+        "Controladora com falha",
+    )
+    MOTOR_DESLIGADO = (
+        "MOTOR_DESLIGADO",
+        "Motor desligado",
+    )
+    MOTOR_TRAVADO = (
+        "MOTOR_TRAVADO",
+        "Motor travado",
+    )
+    MOTOR_IRREGULAR = (
+        "MOTOR_IRREGULAR",
+        "Funcionamento irregular do motor",
+    )
+    REGUA_DANIFICADA = (
+        "REGUA_DANIFICADA",
+        "Régua danificada",
+    )
+    REGUA_ENTUPIDA = (
+        "REGUA_ENTUPIDA",
+        "Régua entupida",
+    )
+    REGUA_COM_VAZAMENTO = (
+        "REGUA_COM_VAZAMENTO",
+        "Vazamento na régua",
+    )
+    BICOS_SEM_VAZAO = (
+        "BICOS_SEM_VAZAO",
+        "Bicos sem vazão",
+    )
+    SENSOR_NAO_DETECTA = (
+        "SENSOR_NAO_DETECTA",
+        "Sensor de indução não detecta",
+    )
+    SENSOR_INTERMITENTE = (
+        "SENSOR_INTERMITENTE",
+        "Sensor de indução intermitente",
+    )
+    SENSOR_DESALINHADO = (
+        "SENSOR_DESALINHADO",
+        "Sensor de indução desalinhado",
+    )
 
 
 class AlimentacaoEletricaChoices(models.TextChoices):
@@ -436,9 +503,18 @@ class RegistroLubrificador(models.Model):
         on_delete=models.PROTECT,
         null=True,
         blank=True,
-        related_name="corretivas",
+        related_name="execucoes_corretivas",
         limit_choices_to={"tipo_atuacao": "INSPECAO"},
         verbose_name="Inspeção de origem",
+    )
+
+    ordem_corretiva = models.ForeignKey(
+        "OrdemCorretivaLubrificador",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="execucoes",
+        verbose_name="Ordem corretiva",
     )
 
     resultado_inspecao = models.CharField(
@@ -452,7 +528,7 @@ class RegistroLubrificador(models.Model):
         max_length=20,
         choices=ResultadoCorretivaChoices.choices,
         blank=True,
-        verbose_name="Resultado da corretiva",
+        verbose_name="Resultado da execução corretiva",
     )
 
     situacao_pendencia = models.CharField(
@@ -534,7 +610,7 @@ class RegistroLubrificador(models.Model):
 
     falha_encontrada = models.TextField(
         blank=True,
-        verbose_name="Falha ou condição encontrada",
+        verbose_name="Resumo das falhas",
     )
 
     servico_executado = models.TextField(
@@ -643,6 +719,11 @@ class RegistroLubrificador(models.Model):
                     "Uma inspeção não pode possuir inspeção de origem."
                 )
 
+            if self.ordem_corretiva_id:
+                errors["ordem_corretiva"] = (
+                    "Uma inspeção não pode possuir ordem corretiva."
+                )
+
             if self.resultado_corretiva:
                 errors["resultado_corretiva"] = (
                     "O resultado da corretiva não deve ser informado "
@@ -660,35 +741,43 @@ class RegistroLubrificador(models.Model):
         ):
             if not self.inspecao_origem_id:
                 errors["inspecao_origem"] = (
-                    "Selecione a inspeção que originou a corretiva."
+                    "Selecione a inspeção de origem."
+                )
+
+            if not self.ordem_corretiva_id:
+                errors["ordem_corretiva"] = (
+                    "Selecione a ordem corretiva executada."
                 )
 
             if self.resultado_inspecao:
                 errors["resultado_inspecao"] = (
                     "O resultado da inspeção não deve ser informado "
-                    "em uma corretiva."
+                    "em uma execução corretiva."
                 )
 
             if not self.resultado_corretiva:
                 errors["resultado_corretiva"] = (
-                    "Informe o resultado da corretiva."
+                    "Informe o resultado da execução corretiva."
                 )
 
-            if self.inspecao_origem_id:
-                origem = self.inspecao_origem
+            if self.ordem_corretiva_id:
+                ordem = self.ordem_corretiva
 
                 if (
-                    origem.tipo_atuacao
-                    != TipoAtuacaoLubrificadorChoices.INSPECAO
+                    ordem.inspecao_origem.lubrificador_id
+                    != self.lubrificador_id
                 ):
-                    errors["inspecao_origem"] = (
-                        "A origem da corretiva deve ser uma inspeção."
+                    errors["ordem_corretiva"] = (
+                        "A ordem deve pertencer ao mesmo lubrificador."
                     )
 
-                if origem.lubrificador_id != self.lubrificador_id:
-                    errors["inspecao_origem"] = (
-                        "A inspeção de origem deve pertencer ao mesmo "
-                        "lubrificador."
+                if (
+                    self.inspecao_origem_id
+                    and ordem.inspecao_origem_id
+                    != self.inspecao_origem_id
+                ):
+                    errors["ordem_corretiva"] = (
+                        "A ordem não pertence à inspeção informada."
                     )
 
         if errors:
@@ -699,51 +788,148 @@ class RegistroLubrificador(models.Model):
         return super().save(*args, **kwargs)
 
 
-class OrdemCorretivaLubrificador(models.Model):
-    registro_corretiva = models.ForeignKey(
+class FalhaRegistroLubrificador(models.Model):
+    registro_inspecao = models.ForeignKey(
         RegistroLubrificador,
         on_delete=models.CASCADE,
+        related_name="falhas",
+        verbose_name="Inspeção",
+    )
+
+    codigo = models.CharField(
+        max_length=50,
+        choices=FalhaLubrificadorChoices.choices,
+        verbose_name="Falha identificada",
+    )
+
+    class Meta:
+        ordering = ["codigo"]
+        verbose_name = "Falha do lubrificador"
+        verbose_name_plural = "Falhas dos lubrificadores"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["registro_inspecao", "codigo"],
+                name="falha_unica_por_inspecao_lubrificador",
+            ),
+        ]
+
+    def __str__(self):
+        return self.get_codigo_display()
+
+    def clean(self):
+        if not self.registro_inspecao_id:
+            return
+
+        if (
+            self.registro_inspecao.tipo_atuacao
+            != TipoAtuacaoLubrificadorChoices.INSPECAO
+        ):
+            raise ValidationError(
+                {
+                    "registro_inspecao": (
+                        "A falha deve estar vinculada a uma inspeção."
+                    )
+                }
+            )
+
+        if (
+            self.registro_inspecao.resultado_inspecao
+            != ResultadoInspecaoChoices.COM_ANOMALIA
+        ):
+            raise ValidationError(
+                {
+                    "registro_inspecao": (
+                        "Falhas somente podem ser vinculadas a uma "
+                        "inspeção com anomalia."
+                    )
+                }
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class OrdemCorretivaLubrificador(models.Model):
+    inspecao_origem = models.ForeignKey(
+        RegistroLubrificador,
+        on_delete=models.PROTECT,
         related_name="ordens_corretivas",
-        verbose_name="Registro da corretiva",
+        verbose_name="Inspeção de origem",
     )
 
     numero = models.CharField(
         max_length=50,
+        unique=True,
         verbose_name="Número da ordem corretiva",
     )
+
+    situacao = models.CharField(
+        max_length=30,
+        choices=SituacaoOrdemCorretivaChoices.choices,
+        default=SituacaoOrdemCorretivaChoices.AGUARDANDO,
+        verbose_name="Situação da ordem",
+    )
+
+    falhas_atendidas = models.ManyToManyField(
+        FalhaRegistroLubrificador,
+        blank=True,
+        related_name="ordens_corretivas",
+        verbose_name="Falhas atendidas",
+    )
+
+    criada_em = models.DateTimeField(auto_now_add=True)
+    atualizada_em = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["numero"]
         verbose_name = "Ordem corretiva do lubrificador"
         verbose_name_plural = "Ordens corretivas dos lubrificadores"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["registro_corretiva", "numero"],
-                name="ordem_unica_por_corretiva_lubrificador",
-            ),
-        ]
 
     def __str__(self):
-        return self.numero
+        return f"{self.numero} — {self.get_situacao_display()}"
+
+    @property
+    def aberta(self):
+        return self.situacao in {
+            SituacaoOrdemCorretivaChoices.AGUARDANDO,
+            SituacaoOrdemCorretivaChoices.EM_ANDAMENTO,
+            SituacaoOrdemCorretivaChoices.PARCIAL,
+            SituacaoOrdemCorretivaChoices.NAO_RESOLVIDA,
+        }
 
     def clean(self):
-        self.numero = self.numero.strip()
+        self.numero = str(self.numero or "").strip().upper()
 
         if not self.numero:
             raise ValidationError(
                 {"numero": "Informe o número da ordem corretiva."}
             )
 
+        if not self.inspecao_origem_id:
+            return
+
         if (
-            self.registro_corretiva_id
-            and self.registro_corretiva.tipo_atuacao
-            != TipoAtuacaoLubrificadorChoices.CORRETIVA
+            self.inspecao_origem.tipo_atuacao
+            != TipoAtuacaoLubrificadorChoices.INSPECAO
         ):
             raise ValidationError(
                 {
-                    "registro_corretiva": (
-                        "As ordens somente podem ser vinculadas "
-                        "a registros de manutenção corretiva."
+                    "inspecao_origem": (
+                        "A ordem deve estar vinculada a uma inspeção."
+                    )
+                }
+            )
+
+        if (
+            self.inspecao_origem.resultado_inspecao
+            != ResultadoInspecaoChoices.COM_ANOMALIA
+        ):
+            raise ValidationError(
+                {
+                    "inspecao_origem": (
+                        "A ordem somente pode ser criada para uma "
+                        "inspeção com anomalia."
                     )
                 }
             )
