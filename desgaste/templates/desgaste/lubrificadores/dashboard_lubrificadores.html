@@ -1,0 +1,1138 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard de Lubrificadores{% endblock %}
+
+{% block page_actions %}
+<div class="action-bar">
+    <div class="action-bar-left">
+        <a
+            href="{% url 'listar_lubrificadores' %}"
+            class="btn btn-ghost"
+        >
+            Voltar aos lubrificadores
+        </a>
+    </div>
+</div>
+
+{{ graficos|json_script:"dados-graficos-lubrificadores" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const elementoDados = document.getElementById(
+        "dados-graficos-lubrificadores"
+    );
+
+    if (!elementoDados || typeof Chart === "undefined") {
+        return;
+    }
+
+    const dados = JSON.parse(elementoDados.textContent);
+
+    const opcoesComuns = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: "bottom",
+                labels: {
+                    usePointStyle: true,
+                    padding: 18
+                }
+            }
+        }
+    };
+
+    new Chart(
+        document.getElementById("grafico-status"),
+        {
+            type: "doughnut",
+            data: {
+                labels: dados.status.labels,
+                datasets: [{
+                    data: dados.status.valores,
+                    backgroundColor: [
+                        "#16a34a",
+                        "#d97706",
+                        "#ca8a04",
+                        "#dc2626"
+                    ],
+                    borderWidth: 2,
+                    borderColor: "#ffffff"
+                }]
+            },
+            options: {
+                ...opcoesComuns,
+                cutout: "62%"
+            }
+        }
+    );
+
+    new Chart(
+        document.getElementById("grafico-vias"),
+        {
+            type: "bar",
+            data: {
+                labels: dados.vias.labels,
+                datasets: [
+                    {
+                        label: "Operacionais",
+                        data: dados.vias.operacionais,
+                        backgroundColor: "#16a34a",
+                        borderRadius: 7
+                    },
+                    {
+                        label: "Com alguma condição",
+                        data: dados.vias.com_condicao,
+                        backgroundColor: "#d97706",
+                        borderRadius: 7
+                    }
+                ]
+            },
+            options: {
+                ...opcoesComuns,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        }
+    );
+
+    new Chart(
+        document.getElementById("grafico-graxa"),
+        {
+            type: "doughnut",
+            data: {
+                labels: dados.graxa.labels,
+                datasets: [{
+                    data: dados.graxa.valores,
+                    backgroundColor: [
+                        "#dc2626",
+                        "#d97706",
+                        "#16a34a",
+                        "#94a3b8"
+                    ],
+                    borderWidth: 2,
+                    borderColor: "#ffffff"
+                }]
+            },
+            options: {
+                ...opcoesComuns,
+                cutout: "55%"
+            }
+        }
+    );
+
+    new Chart(
+        document.getElementById("grafico-inspecoes"),
+        {
+            type: "bar",
+            data: {
+                labels: dados.inspecoes.labels,
+                datasets: [{
+                    label: "Inspeções",
+                    data: dados.inspecoes.valores,
+                    backgroundColor: [
+                        "#16a34a",
+                        "#dc2626"
+                    ],
+                    borderRadius: 8,
+                    maxBarThickness: 90
+                }]
+            },
+            options: {
+                ...opcoesComuns,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        }
+    );
+});
+</script>
+
+{% endblock %}
+
+{% block content %}
+<style>
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 18px;
+        margin-bottom: 24px;
+    }
+
+    .dashboard-atualizacao {
+        padding: 9px 13px;
+        border-radius: 9px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 13px;
+    }
+
+    .dashboard-filtros {
+        display: grid;
+        grid-template-columns:
+            repeat(4, minmax(160px, 1fr))
+            auto;
+        gap: 14px;
+        align-items: end;
+    }
+
+    .dashboard-filtros .field {
+        margin: 0;
+    }
+
+    .dashboard-filtros input,
+    .dashboard-filtros select {
+        width: 100%;
+    }
+
+    .dashboard-filtros-acoes {
+        display: flex;
+        gap: 8px;
+    }
+
+    .indicadores-grid {
+        display: grid;
+        grid-template-columns:
+            repeat(4, minmax(180px, 1fr));
+        gap: 16px;
+        margin: 24px 0;
+    }
+
+    .indicador-card {
+        position: relative;
+        min-height: 122px;
+        overflow: hidden;
+        padding: 20px;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        background: #ffffff;
+        box-shadow: 0 5px 16px rgba(15, 23, 42, 0.06);
+    }
+
+    .indicador-card::before {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 5px;
+        height: 100%;
+        content: "";
+        background: #64748b;
+    }
+
+    .indicador-total::before {
+        background: #4f46e5;
+    }
+
+    .indicador-operacional::before {
+        background: #16a34a;
+    }
+
+    .indicador-restricao::before {
+        background: #d97706;
+    }
+
+    .indicador-manutencao::before {
+        background: #ca8a04;
+    }
+
+    .indicador-inoperante::before {
+        background: #dc2626;
+    }
+
+    .indicador-pendencia::before {
+        background: #ea580c;
+    }
+
+    .indicador-parcial::before {
+        background: #9333ea;
+    }
+
+    .indicador-label {
+        display: block;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.35;
+        text-transform: uppercase;
+        letter-spacing: 0.035em;
+    }
+
+    .indicador-valor {
+        display: block;
+        margin-top: 10px;
+        color: #0f172a;
+        font-size: 34px;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .indicador-detalhe {
+        display: block;
+        margin-top: 8px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .graficos-grid {
+        display: grid;
+        grid-template-columns:
+            repeat(2, minmax(320px, 1fr));
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+
+    .grafico-card {
+        min-width: 0;
+    }
+
+    .grafico-area {
+        position: relative;
+        width: 100%;
+        height: 330px;
+    }
+
+    .grafico-descricao {
+        margin: 0 0 18px;
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .dashboard-duas-colunas {
+        display: grid;
+        grid-template-columns:
+            minmax(0, 2fr)
+            minmax(280px, 1fr);
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+
+    .resumo-periodo {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .resumo-periodo-item {
+        padding: 18px;
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .resumo-ok {
+        background: #f0fdf4;
+        color: #166534;
+    }
+
+    .resumo-nok {
+        background: #fef2f2;
+        color: #991b1b;
+    }
+
+    .resumo-periodo-valor {
+        display: block;
+        font-size: 32px;
+        font-weight: 800;
+    }
+
+    .resumo-periodo-label {
+        display: block;
+        margin-top: 5px;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .status-resumo-lista {
+        display: flex;
+        flex-direction: column;
+        gap: 11px;
+    }
+
+    .status-resumo-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 13px;
+        border-radius: 9px;
+        background: #f8fafc;
+    }
+
+    .status-resumo-nome {
+        color: #475569;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .status-resumo-valor {
+        color: #0f172a;
+        font-size: 17px;
+        font-weight: 800;
+    }
+
+    .dashboard-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .dashboard-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 920px;
+    }
+
+    .dashboard-table th {
+        padding: 12px;
+        border-bottom: 2px solid #e2e8f0;
+        color: #475569;
+        font-size: 12px;
+        text-align: left;
+        text-transform: uppercase;
+        letter-spacing: 0.035em;
+    }
+
+    .dashboard-table td {
+        padding: 14px 12px;
+        border-bottom: 1px solid #e2e8f0;
+        color: #334155;
+        font-size: 14px;
+        vertical-align: top;
+    }
+
+    .dashboard-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .equipamento-nome {
+        color: #0f172a;
+        font-weight: 800;
+    }
+
+    .equipamento-local {
+        display: block;
+        margin-top: 3px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .falha-pendente {
+        max-width: 330px;
+        color: #7c2d12;
+        line-height: 1.45;
+    }
+
+    .badge-dashboard {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .badge-AGUARDANDO {
+        background: #ffedd5;
+        color: #9a3412;
+    }
+
+    .badge-PARCIAL {
+        background: #f3e8ff;
+        color: #7e22ce;
+    }
+
+    .badge-EM_TRATAMENTO {
+        background: #fef9c3;
+        color: #854d0e;
+    }
+
+    .badge-ok,
+    .badge-resolvida {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-nok {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .badge-parcial {
+        background: #f3e8ff;
+        color: #7e22ce;
+    }
+
+    .acoes-linha {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+    }
+
+    .atividade-lista {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .atividade-item {
+        display: grid;
+        grid-template-columns:
+            150px
+            minmax(160px, 0.8fr)
+            minmax(130px, 0.6fr)
+            minmax(160px, 0.8fr)
+            minmax(180px, 1fr);
+        gap: 14px;
+        align-items: center;
+        padding: 14px 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .atividade-item:last-child {
+        border-bottom: 0;
+    }
+
+    .atividade-data {
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .atividade-equipamento {
+        color: #0f172a;
+        font-weight: 800;
+    }
+
+    .atividade-tipo {
+        color: #475569;
+        font-weight: 700;
+    }
+
+    .atividade-responsavel {
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .atividade-ordens {
+        margin-top: 5px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .dashboard-vazio {
+        padding: 34px 20px;
+        color: #64748b;
+        text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+        .dashboard-filtros {
+            grid-template-columns:
+                repeat(2, minmax(180px, 1fr));
+        }
+
+        .indicadores-grid {
+            grid-template-columns:
+                repeat(2, minmax(180px, 1fr));
+        }
+
+        .dashboard-duas-colunas {
+            grid-template-columns: 1fr;
+        }
+
+        .atividade-item {
+            grid-template-columns:
+                130px
+                minmax(150px, 1fr)
+                minmax(110px, 0.7fr)
+                minmax(140px, 0.8fr);
+        }
+
+        .atividade-responsavel {
+            grid-column: 2 / -1;
+        }
+    }
+
+    @media (max-width: 650px) {
+        .dashboard-filtros {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-filtros-acoes {
+            width: 100%;
+        }
+
+        .dashboard-filtros-acoes .btn {
+            flex: 1;
+        }
+
+        .indicadores-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .resumo-periodo {
+            grid-template-columns: 1fr;
+        }
+
+        .atividade-item {
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+
+        .atividade-responsavel {
+            grid-column: auto;
+        }
+    }
+</style>
+
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">
+            Dashboard de Lubrificadores
+        </h1>
+
+        <p class="page-subtitle">
+            Visão atual dos equipamentos, pendências corretivas e
+            atividades de manutenção.
+        </p>
+    </div>
+
+    <div class="dashboard-atualizacao">
+        Os status dos cartões representam a condição atual dos
+        equipamentos.
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Filtros</div>
+
+    <div class="card-body">
+        <form method="get" class="dashboard-filtros">
+            <div class="field">
+                <label for="id_data_inicial">
+                    Data inicial
+                </label>
+
+                <input
+                    type="date"
+                    id="id_data_inicial"
+                    name="data_inicial"
+                    class="form-control"
+                    value="{{ filtro_data_inicial }}"
+                >
+            </div>
+
+            <div class="field">
+                <label for="id_data_final">
+                    Data final
+                </label>
+
+                <input
+                    type="date"
+                    id="id_data_final"
+                    name="data_final"
+                    class="form-control"
+                    value="{{ filtro_data_final }}"
+                >
+            </div>
+
+            <div class="field">
+                <label for="id_via">Via</label>
+
+                <select
+                    id="id_via"
+                    name="via"
+                    class="form-control"
+                >
+                    <option value="">Todas as vias</option>
+
+                    {% for valor, descricao in via_choices %}
+                    <option
+                        value="{{ valor }}"
+                        {% if filtro_via == valor %}selected{% endif %}
+                    >
+                        {{ descricao }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="id_status">
+                    Status operacional
+                </label>
+
+                <select
+                    id="id_status"
+                    name="status"
+                    class="form-control"
+                >
+                    <option value="">Todos os status</option>
+
+                    {% for valor, descricao in status_choices %}
+                    <option
+                        value="{{ valor }}"
+                        {% if filtro_status == valor %}selected{% endif %}
+                    >
+                        {{ descricao }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="id_lubrificador">
+                    Lubrificador
+                </label>
+
+                <select
+                    id="id_lubrificador"
+                    name="lubrificador"
+                    class="form-control"
+                >
+                    <option value="">
+                        Todos os lubrificadores
+                    </option>
+
+                    {% for item in opcoes_lubrificadores %}
+                    <option
+                        value="{{ item.pk }}"
+                        {% if filtro_lubrificador_id == item.pk %}selected{% endif %}
+                    >
+                        {{ item.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="dashboard-filtros-acoes">
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Aplicar
+                </button>
+
+                <a
+                    href="{% url 'dashboard_lubrificadores' %}"
+                    class="btn btn-ghost"
+                >
+                    Limpar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="indicadores-grid">
+    <div class="indicador-card indicador-total">
+        <span class="indicador-label">
+            Total de lubrificadores
+        </span>
+
+        <span class="indicador-valor">
+            {{ indicadores.total }}
+        </span>
+
+        <span class="indicador-detalhe">
+            Considerando os filtros aplicados
+        </span>
+    </div>
+
+    <div class="indicador-card indicador-operacional">
+        <span class="indicador-label">
+            Operacionais
+        </span>
+
+        <span class="indicador-valor">
+            {{ indicadores.operacionais }}
+        </span>
+    </div>
+
+    <div class="indicador-card indicador-restricao">
+        <span class="indicador-label">
+            Operacionais com restrição
+        </span>
+
+        <span class="indicador-valor">
+            {{ indicadores.restricao }}
+        </span>
+    </div>
+
+    <div class="indicador-card indicador-manutencao">
+        <span class="indicador-label">
+            Em manutenção
+        </span>
+
+        <span class="indicador-valor">
+            {{ indicadores.manutencao }}
+        </span>
+    </div>
+
+    <div class="indicador-card indicador-inoperante">
+        <span class="indicador-label">
+            Inoperantes
+        </span>
+
+        <span class="indicador-valor">
+            {{ indicadores.inoperantes }}
+        </span>
+    </div>
+
+    <div class="indicador-card indicador-pendencia">
+        <span class="indicador-label">
+            Pendências abertas
+        </span>
+
+        <span class="indicador-valor">
+            {{ indicadores.pendencias }}
+        </span>
+
+        <span class="indicador-detalhe">
+            Inspeções NOK ainda não concluídas
+        </span>
+    </div>
+
+    <div class="indicador-card indicador-parcial">
+        <span class="indicador-label">
+            Ordens parcialmente executadas
+        </span>
+
+        <span class="indicador-valor">
+            {{ indicadores.ordens_parciais }}
+        </span>
+
+        <span class="indicador-detalhe">
+            Considerando somente o status mais recente
+        </span>
+    </div>
+</div>
+
+<div class="graficos-grid">
+    <div class="card grafico-card">
+        <div class="card-header">
+            Status atual dos equipamentos
+        </div>
+
+        <div class="card-body">
+            <p class="grafico-descricao">
+                Distribuição dos lubrificadores conforme o status
+                operacional atual.
+            </p>
+
+            <div class="grafico-area">
+                <canvas id="grafico-status"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card grafico-card">
+        <div class="card-header">
+            Situação por via
+        </div>
+
+        <div class="card-body">
+            <p class="grafico-descricao">
+                Comparação entre equipamentos operacionais e
+                equipamentos com restrição, manutenção ou
+                inoperância.
+            </p>
+
+            <div class="grafico-area">
+                <canvas id="grafico-vias"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card grafico-card">
+        <div class="card-header">
+            Nível atual de graxa
+        </div>
+
+        <div class="card-body">
+            <p class="grafico-descricao">
+                Classificação baseada no registro mais recente de
+                cada lubrificador.
+            </p>
+
+            <div class="grafico-area">
+                <canvas id="grafico-graxa"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card grafico-card">
+        <div class="card-header">
+            Inspeções por resultado
+        </div>
+
+        <div class="card-body">
+            <p class="grafico-descricao">
+                Quantidade de inspeções OK e NOK considerando o
+                período selecionado.
+            </p>
+
+            <div class="grafico-area">
+                <canvas id="grafico-inspecoes"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-duas-colunas">
+    <div class="card">
+        <div class="card-header">
+            Inspeções no período
+        </div>
+
+        <div class="card-body">
+            <div class="resumo-periodo">
+                <div class="resumo-periodo-item resumo-ok">
+                    <span class="resumo-periodo-valor">
+                        {{ resumo_periodo.inspecoes_ok }}
+                    </span>
+
+                    <span class="resumo-periodo-label">
+                        Inspeções OK
+                    </span>
+                </div>
+
+                <div class="resumo-periodo-item resumo-nok">
+                    <span class="resumo-periodo-valor">
+                        {{ resumo_periodo.inspecoes_nok }}
+                    </span>
+
+                    <span class="resumo-periodo-label">
+                        Inspeções NOK
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Distribuição atual
+        </div>
+
+        <div class="card-body">
+            <div class="status-resumo-lista">
+                <div class="status-resumo-item">
+                    <span class="status-resumo-nome">
+                        Operacionais
+                    </span>
+
+                    <span class="status-resumo-valor">
+                        {{ indicadores.operacionais }}
+                    </span>
+                </div>
+
+                <div class="status-resumo-item">
+                    <span class="status-resumo-nome">
+                        Com restrição
+                    </span>
+
+                    <span class="status-resumo-valor">
+                        {{ indicadores.restricao }}
+                    </span>
+                </div>
+
+                <div class="status-resumo-item">
+                    <span class="status-resumo-nome">
+                        Em manutenção
+                    </span>
+
+                    <span class="status-resumo-valor">
+                        {{ indicadores.manutencao }}
+                    </span>
+                </div>
+
+                <div class="status-resumo-item">
+                    <span class="status-resumo-nome">
+                        Inoperantes
+                    </span>
+
+                    <span class="status-resumo-valor">
+                        {{ indicadores.inoperantes }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        Pendências corretivas atuais
+    </div>
+
+    <div class="card-body">
+        {% if pendencias_dashboard %}
+        <div class="dashboard-table-wrapper">
+            <table class="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Lubrificador</th>
+                        <th>Falha pendente</th>
+                        <th>Ordem</th>
+                        <th>Status da ordem</th>
+                        <th>Última atuação</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in pendencias_dashboard %}
+                    <tr>
+                        <td>
+                            <span class="equipamento-nome">
+                                {{ item.lubrificador.nome }}
+                            </span>
+
+                            <span class="equipamento-local">
+                                {{ item.lubrificador.get_via_display|default:"Via não informada" }}
+                                •
+                                {{ item.lubrificador.mt|default:"MT não informado" }}
+                            </span>
+                        </td>
+
+                        <td class="falha-pendente">
+                            {{ item.falha }}
+                        </td>
+
+                        <td>
+                            {% if item.ordem %}
+                                <strong>{{ item.ordem }}</strong>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <span
+                                class="badge-dashboard badge-{{ item.status_codigo }}"
+                            >
+                                {{ item.status_ordem }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {{ item.ultima_atuacao|date:"d/m/Y H:i" }}
+                        </td>
+
+                        <td>
+                            <div class="acoes-linha">
+                                <a
+                                    href="{% url 'registrar_corretiva_lubrificador' item.lubrificador.pk item.inspecao.pk %}"
+                                    class="btn btn-success"
+                                >
+                                    Registrar corretiva
+                                </a>
+
+                                <a
+                                    href="{% url 'historico_lubrificador' item.lubrificador.pk %}"
+                                    class="btn btn-secondary"
+                                >
+                                    Histórico
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="dashboard-vazio">
+            Nenhuma pendência corretiva encontrada para os filtros
+            selecionados.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        Atividades recentes
+    </div>
+
+    <div class="card-body">
+        {% if atividades_recentes %}
+        <div class="atividade-lista">
+            {% for item in atividades_recentes %}
+            <div class="atividade-item">
+                <div class="atividade-data">
+                    {{ item.registro.data_hora|date:"d/m/Y H:i" }}
+                </div>
+
+                <div>
+                    <div class="atividade-equipamento">
+                        {{ item.registro.lubrificador.nome }}
+                    </div>
+
+                    <div class="equipamento-local">
+                        {{ item.registro.lubrificador.get_via_display|default:"Via não informada" }}
+                    </div>
+                </div>
+
+                <div class="atividade-tipo">
+                    {{ item.tipo }}
+                </div>
+
+                <div>
+                    <span
+                        class="badge-dashboard badge-{{ item.classe_resultado }}"
+                    >
+                        {{ item.resultado }}
+                    </span>
+
+                    {% if item.ordens %}
+                    <div class="atividade-ordens">
+                        {% for ordem in item.ordens %}
+                            Ordem {{ ordem.numero }}:
+                            {{ ordem.get_situacao_display }}
+                            {% if not forloop.last %}<br>{% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="atividade-responsavel">
+                    {% if item.registro.registrado_por %}
+                        Registrado por
+                        {% firstof item.registro.registrado_por.get_full_name item.registro.registrado_por.username %}
+                    {% else %}
+                        Responsável não informado
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="dashboard-vazio">
+            Nenhuma atividade encontrada no período selecionado.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

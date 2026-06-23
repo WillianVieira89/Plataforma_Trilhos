@@ -4,6 +4,7 @@ from django.db.models import OuterRef, Subquery
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import never_cache
+from django.utils.dateparse import parse_date
 from .relatorios import gerar_excel_ocorrencias_inspecao
 
 from .constants import ESTACOES_MAPA
@@ -556,6 +557,543 @@ def api_itens_inspecao(request):
     return JsonResponse({
         "itens": list(itens)
     })
+
+def dashboard_lubrificadores(request):
+    filtro_data_inicial = request.GET.get(
+        "data_inicial",
+        "",
+    ).strip()
+    filtro_data_final = request.GET.get(
+        "data_final",
+        "",
+    ).strip()
+    filtro_via = request.GET.get("via", "").strip()
+    filtro_status = request.GET.get("status", "").strip()
+    filtro_lubrificador = request.GET.get(
+        "lubrificador",
+        "",
+    ).strip()
+
+    data_inicial = (
+        parse_date(filtro_data_inicial)
+        if filtro_data_inicial
+        else None
+    )
+    data_final = (
+        parse_date(filtro_data_final)
+        if filtro_data_final
+        else None
+    )
+
+    if (
+        data_inicial
+        and data_final
+        and data_inicial > data_final
+    ):
+        data_inicial, data_final = data_final, data_inicial
+        filtro_data_inicial = data_inicial.isoformat()
+        filtro_data_final = data_final.isoformat()
+
+    opcoes_lubrificadores = list(
+        Lubrificador.objects.order_by("nome")
+    )
+
+    lubrificadores_qs = Lubrificador.objects.all()
+
+    vias_validas = {
+        valor
+        for valor, _descricao in ViaChoices.choices
+    }
+    status_validos = {
+        valor
+        for valor, _descricao
+        in StatusLubrificadorChoices.choices
+    }
+
+    if filtro_via in vias_validas:
+        lubrificadores_qs = lubrificadores_qs.filter(
+            via=filtro_via
+        )
+
+    if filtro_status in status_validos:
+        lubrificadores_qs = lubrificadores_qs.filter(
+            status_operacional=filtro_status
+        )
+
+    filtro_lubrificador_id = None
+
+    if filtro_lubrificador:
+        try:
+            filtro_lubrificador_id = int(
+                filtro_lubrificador
+            )
+        except (TypeError, ValueError):
+            filtro_lubrificador_id = None
+
+        if filtro_lubrificador_id:
+            lubrificadores_qs = lubrificadores_qs.filter(
+                pk=filtro_lubrificador_id
+            )
+
+    lubrificadores = list(
+        lubrificadores_qs.order_by("nome")
+    )
+
+    ids_lubrificadores = [
+        lubrificador.pk
+        for lubrificador in lubrificadores
+    ]
+
+    indicadores = {
+        "total": len(lubrificadores),
+        "operacionais": sum(
+            1
+            for item in lubrificadores
+            if item.status_operacional
+            == StatusLubrificadorChoices.OPERANTE
+        ),
+        "restricao": sum(
+            1
+            for item in lubrificadores
+            if item.status_operacional
+            == StatusLubrificadorChoices.OPERANTE_RESTRICAO
+        ),
+        "manutencao": sum(
+            1
+            for item in lubrificadores
+            if item.status_operacional
+            == StatusLubrificadorChoices.MANUTENCAO
+        ),
+        "inoperantes": sum(
+            1
+            for item in lubrificadores
+            if item.status_operacional
+            == StatusLubrificadorChoices.INOPERANTE
+        ),
+    }
+
+    pendencias = list(
+        RegistroLubrificador.objects
+        .filter(
+            lubrificador_id__in=ids_lubrificadores,
+            tipo_atuacao=(
+                TipoAtuacaoLubrificadorChoices.INSPECAO
+            ),
+            resultado_inspecao=(
+                ResultadoInspecaoChoices.COM_ANOMALIA
+            ),
+            situacao_pendencia__in=[
+                SituacaoPendenciaChoices.AGUARDANDO_CORRETIVA,
+                SituacaoPendenciaChoices.EM_TRATAMENTO,
+            ],
+        )
+        .select_related(
+            "lubrificador",
+            "registrado_por",
+        )
+        .order_by("-data_hora", "-criado_em")
+    )
+
+    ids_pendencias = [
+        pendencia.pk
+        for pendencia in pendencias
+    ]
+
+    ordens_historicas = (
+        OrdemCorretivaLubrificador.objects
+        .filter(
+            registro_corretiva__inspecao_origem_id__in=(
+                ids_pendencias
+            )
+        )
+        .select_related(
+            "registro_corretiva",
+            "registro_corretiva__lubrificador",
+        )
+        .order_by(
+            "-registro_corretiva__data_hora",
+            "-registro_corretiva__criado_em",
+            "-pk",
+        )
+    )
+
+    ordens_atuais_por_inspecao = {}
+
+    for ordem in ordens_historicas:
+        inspecao_id = (
+            ordem.registro_corretiva.inspecao_origem_id
+        )
+        numero = str(ordem.numero or "").strip().upper()
+
+        if not numero:
+            continue
+
+        ordens_inspecao = (
+            ordens_atuais_por_inspecao.setdefault(
+                inspecao_id,
+                {},
+            )
+        )
+
+        if numero not in ordens_inspecao:
+            ordens_inspecao[numero] = ordem
+
+    corretivas_historicas = (
+        RegistroLubrificador.objects
+        .filter(
+            tipo_atuacao=(
+                TipoAtuacaoLubrificadorChoices.CORRETIVA
+            ),
+            inspecao_origem_id__in=ids_pendencias,
+        )
+        .select_related("lubrificador")
+        .order_by("-data_hora", "-criado_em")
+    )
+
+    ultima_corretiva_por_inspecao = {}
+
+    for corretiva in corretivas_historicas:
+        if (
+            corretiva.inspecao_origem_id
+            not in ultima_corretiva_por_inspecao
+        ):
+            ultima_corretiva_por_inspecao[
+                corretiva.inspecao_origem_id
+            ] = corretiva
+
+    linhas_pendencias = []
+    total_ordens_parciais = 0
+
+    for inspecao in pendencias:
+        ordens_atuais = ordens_atuais_por_inspecao.get(
+            inspecao.pk,
+            {},
+        )
+
+        ordens_parciais = [
+            ordem
+            for ordem in ordens_atuais.values()
+            if ordem.situacao
+            == SituacaoOrdemCorretivaChoices.PARCIAL
+        ]
+
+        total_ordens_parciais += len(ordens_parciais)
+
+        if ordens_parciais:
+            for ordem in ordens_parciais:
+                linhas_pendencias.append({
+                    "lubrificador": inspecao.lubrificador,
+                    "inspecao": inspecao,
+                    "falha": (
+                        ordem.falha_vinculada
+                        or inspecao.falha_encontrada
+                        or "Falha pendente"
+                    ),
+                    "ordem": ordem.numero,
+                    "status_ordem": (
+                        ordem.get_situacao_display()
+                    ),
+                    "status_codigo": ordem.situacao,
+                    "ultima_atuacao": (
+                        ordem.registro_corretiva.data_hora
+                    ),
+                })
+
+            continue
+
+        if not ordens_atuais:
+            falhas = [
+                falha.strip()
+                for falha in (
+                    inspecao.falha_encontrada or ""
+                ).split(";")
+                if falha.strip()
+            ]
+
+            if not falhas:
+                falhas = ["Pendência aguardando corretiva"]
+
+            for falha in falhas:
+                linhas_pendencias.append({
+                    "lubrificador": inspecao.lubrificador,
+                    "inspecao": inspecao,
+                    "falha": falha,
+                    "ordem": "",
+                    "status_ordem": "Aguardando ordem",
+                    "status_codigo": "AGUARDANDO",
+                    "ultima_atuacao": inspecao.data_hora,
+                })
+
+            continue
+
+        ultima_corretiva = (
+            ultima_corretiva_por_inspecao.get(inspecao.pk)
+        )
+
+        linhas_pendencias.append({
+            "lubrificador": inspecao.lubrificador,
+            "inspecao": inspecao,
+            "falha": (
+                ultima_corretiva.falha_encontrada
+                if (
+                    ultima_corretiva
+                    and ultima_corretiva.falha_encontrada
+                )
+                else "Pendência ainda em tratamento"
+            ),
+            "ordem": "",
+            "status_ordem": "Em tratamento",
+            "status_codigo": "EM_TRATAMENTO",
+            "ultima_atuacao": (
+                ultima_corretiva.data_hora
+                if ultima_corretiva
+                else inspecao.data_hora
+            ),
+        })
+
+    linhas_pendencias.sort(
+        key=lambda item: item["ultima_atuacao"],
+        reverse=True,
+    )
+
+    indicadores["pendencias"] = len(pendencias)
+    indicadores["ordens_parciais"] = (
+        total_ordens_parciais
+    )
+
+    distribuicao_vias = []
+
+    for valor_via, descricao_via in ViaChoices.choices:
+        equipamentos_via = [
+            equipamento
+            for equipamento in lubrificadores
+            if equipamento.via == valor_via
+        ]
+
+        operacionais_via = sum(
+            1
+            for equipamento in equipamentos_via
+            if equipamento.status_operacional
+            == StatusLubrificadorChoices.OPERANTE
+        )
+
+        com_condicao_via = (
+            len(equipamentos_via) - operacionais_via
+        )
+
+        distribuicao_vias.append({
+            "via": descricao_via,
+            "operacionais": operacionais_via,
+            "com_condicao": com_condicao_via,
+        })
+
+    niveis_graxa = {
+        "critico": 0,
+        "atencao": 0,
+        "adequado": 0,
+        "sem_registro": 0,
+    }
+
+    equipamentos_com_graxa = set()
+
+    registros_graxa = (
+        RegistroLubrificador.objects
+        .filter(lubrificador_id__in=ids_lubrificadores)
+        .order_by(
+            "lubrificador_id",
+            "-data_hora",
+            "-criado_em",
+        )
+    )
+
+    for registro_graxa in registros_graxa:
+        lubrificador_id = registro_graxa.lubrificador_id
+
+        if lubrificador_id in equipamentos_com_graxa:
+            continue
+
+        equipamentos_com_graxa.add(lubrificador_id)
+
+        nivel = registro_graxa.nivel_graxa_percentual
+
+        if nivel is None:
+            niveis_graxa["sem_registro"] += 1
+        elif nivel <= 20:
+            niveis_graxa["critico"] += 1
+        elif nivel <= 50:
+            niveis_graxa["atencao"] += 1
+        else:
+            niveis_graxa["adequado"] += 1
+
+    niveis_graxa["sem_registro"] += (
+        len(ids_lubrificadores)
+        - len(equipamentos_com_graxa)
+    )
+
+    registros_periodo = (
+        RegistroLubrificador.objects
+        .filter(lubrificador_id__in=ids_lubrificadores)
+        .select_related(
+            "lubrificador",
+            "registrado_por",
+            "inspecao_origem",
+        )
+        .prefetch_related("ordens_corretivas")
+    )
+
+    if data_inicial:
+        registros_periodo = registros_periodo.filter(
+            data_hora__date__gte=data_inicial
+        )
+
+    if data_final:
+        registros_periodo = registros_periodo.filter(
+            data_hora__date__lte=data_final
+        )
+
+    inspecoes_periodo = registros_periodo.filter(
+        tipo_atuacao=(
+            TipoAtuacaoLubrificadorChoices.INSPECAO
+        )
+    )
+
+    resumo_periodo = {
+        "inspecoes_ok": inspecoes_periodo.filter(
+            resultado_inspecao=(
+                ResultadoInspecaoChoices.CONFORME
+            )
+        ).count(),
+        "inspecoes_nok": inspecoes_periodo.filter(
+            resultado_inspecao=(
+                ResultadoInspecaoChoices.COM_ANOMALIA
+            )
+        ).count(),
+    }
+
+    graficos = {
+        "status": {
+            "labels": [
+                "Operacionais",
+                "Com restrição",
+                "Em manutenção",
+                "Inoperantes",
+            ],
+            "valores": [
+                indicadores["operacionais"],
+                indicadores["restricao"],
+                indicadores["manutencao"],
+                indicadores["inoperantes"],
+            ],
+        },
+        "vias": {
+            "labels": [
+                item["via"]
+                for item in distribuicao_vias
+            ],
+            "operacionais": [
+                item["operacionais"]
+                for item in distribuicao_vias
+            ],
+            "com_condicao": [
+                item["com_condicao"]
+                for item in distribuicao_vias
+            ],
+        },
+        "graxa": {
+            "labels": [
+                "Crítico: 0% a 20%",
+                "Atenção: 21% a 50%",
+                "Adequado: acima de 50%",
+                "Sem registro",
+            ],
+            "valores": [
+                niveis_graxa["critico"],
+                niveis_graxa["atencao"],
+                niveis_graxa["adequado"],
+                niveis_graxa["sem_registro"],
+            ],
+        },
+        "inspecoes": {
+            "labels": ["OK", "NOK"],
+            "valores": [
+                resumo_periodo["inspecoes_ok"],
+                resumo_periodo["inspecoes_nok"],
+            ],
+        },
+    }
+
+    atividades_recentes = []
+
+    for registro in (
+        registros_periodo
+        .order_by("-data_hora", "-criado_em")[:15]
+    ):
+        if (
+            registro.tipo_atuacao
+            == TipoAtuacaoLubrificadorChoices.INSPECAO
+        ):
+            tipo = "Inspeção"
+            resultado = (
+                registro.get_resultado_inspecao_display()
+                or "Sem resultado"
+            )
+            classe_resultado = (
+                "ok"
+                if registro.resultado_inspecao
+                == ResultadoInspecaoChoices.CONFORME
+                else "nok"
+            )
+        else:
+            tipo = "Corretiva"
+            resultado = (
+                registro.get_resultado_corretiva_display()
+                or "Sem resultado"
+            )
+            classe_resultado = (
+                "resolvida"
+                if registro.resultado_corretiva
+                == ResultadoCorretivaChoices.RESOLVIDA
+                else "parcial"
+            )
+
+        atividades_recentes.append({
+            "registro": registro,
+            "tipo": tipo,
+            "resultado": resultado,
+            "classe_resultado": classe_resultado,
+            "ordens": list(
+                registro.ordens_corretivas.all()
+            ),
+        })
+
+    return render(
+        request,
+        (
+            "desgaste/lubrificadores/"
+            "dashboard_lubrificadores.html"
+        ),
+        {
+            "indicadores": indicadores,
+            "resumo_periodo": resumo_periodo,
+            "graficos": graficos,
+            "pendencias_dashboard": linhas_pendencias,
+            "atividades_recentes": atividades_recentes,
+            "opcoes_lubrificadores": opcoes_lubrificadores,
+            "filtro_data_inicial": filtro_data_inicial,
+            "filtro_data_final": filtro_data_final,
+            "filtro_via": filtro_via,
+            "filtro_status": filtro_status,
+            "filtro_lubrificador": filtro_lubrificador,
+            "filtro_lubrificador_id": (
+                filtro_lubrificador_id
+            ),
+            "via_choices": ViaChoices.choices,
+            "status_choices": (
+                StatusLubrificadorChoices.choices
+            ),
+        },
+    )
+
 
 def listar_lubrificadores(request):
     filtro_via = request.GET.get("via", "").strip()
