@@ -850,7 +850,7 @@ def registrar_corretiva_lubrificador(
 
                 if (
                     registro.resultado_corretiva
-                    == ResultadoCorretivaChoices.RESOLVIDA
+                    == ResultadoCorretivaChoices.EXECUTADA
                 ):
                     registro.situacao_pendencia = (
                         SituacaoPendenciaChoices.CONCLUIDA
@@ -884,7 +884,7 @@ def registrar_corretiva_lubrificador(
 
             if (
                 registro.resultado_corretiva
-                == ResultadoCorretivaChoices.RESOLVIDA
+                == ResultadoCorretivaChoices.EXECUTADA
             ):
                 messages.success(
                     request,

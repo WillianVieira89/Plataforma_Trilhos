@@ -332,9 +332,8 @@ class ResultadoInspecaoChoices(models.TextChoices):
 
 
 class ResultadoCorretivaChoices(models.TextChoices):
-    RESOLVIDA = "RESOLVIDA", "Resolvida"
+    EXECUTADA = "EXECUTADA", "Executada"
     PARCIAL = "PARCIAL", "Executada parcialmente"
-    NAO_RESOLVIDA = "NAO_RESOLVIDA", "Não resolvida"
 
 
 class SituacaoPendenciaChoices(models.TextChoices):
@@ -349,10 +348,8 @@ class SituacaoPendenciaChoices(models.TextChoices):
 
 class SituacaoOrdemCorretivaChoices(models.TextChoices):
     AGUARDANDO = "AGUARDANDO", "Aguardando execução"
-    EM_ANDAMENTO = "EM_ANDAMENTO", "Em andamento"
     PARCIAL = "PARCIAL", "Executada parcialmente"
-    CONCLUIDA = "CONCLUIDA", "Concluída"
-    NAO_RESOLVIDA = "NAO_RESOLVIDA", "Não resolvida"
+    EXECUTADA = "EXECUTADA", "Executada"
 
 
 class FalhaLubrificadorChoices(models.TextChoices):
@@ -893,9 +890,7 @@ class OrdemCorretivaLubrificador(models.Model):
     def aberta(self):
         return self.situacao in {
             SituacaoOrdemCorretivaChoices.AGUARDANDO,
-            SituacaoOrdemCorretivaChoices.EM_ANDAMENTO,
             SituacaoOrdemCorretivaChoices.PARCIAL,
-            SituacaoOrdemCorretivaChoices.NAO_RESOLVIDA,
         }
 
     def clean(self):
