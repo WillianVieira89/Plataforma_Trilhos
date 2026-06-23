@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block page_actions %}
+<div class="action-bar">
+    <div class="action-bar-left">
+        <a href="{% url 'listar_lubrificadores' %}" class="btn btn-ghost">
+            Voltar
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ titulo }}</h1>
+        <p class="page-subtitle">
+            Cadastro físico e localização do equipamento.
+        </p>
+    </div>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="card">
+        <div class="card-header">Dados cadastrais</div>
+
+        <div class="card-body">
+            {% if form.non_field_errors %}
+            <div class="alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div class="grid-3">
+                <div class="field">
+                    {{ form.nome.label_tag }}
+                    {{ form.nome }}
+                    {% for error in form.nome.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field">
+                    {{ form.via.label_tag }}
+                    {{ form.via }}
+                    {% for error in form.via.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field">
+                    {{ form.mt.label_tag }}
+                    {{ form.mt }}
+                    {% for error in form.mt.errors %}
+                    <div class="alert-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-actions">
+        <button type="submit" class="btn btn-success">
+            Salvar
+        </button>
+
+        <a
+            href="{% url 'listar_lubrificadores' %}"
+            class="btn btn-ghost"
+        >
+            Cancelar
+        </a>
+    </div>
+</form>
+{% endblock %}

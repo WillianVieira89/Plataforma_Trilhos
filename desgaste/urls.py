@@ -30,6 +30,16 @@ urlpatterns = [
     path("lubrificadores/", views.listar_lubrificadores, name="listar_lubrificadores"),
     path("lubrificadores/novo/", views.novo_lubrificador, name="novo_lubrificador"),
     path("lubrificadores/<int:pk>/editar/", views.editar_lubrificador, name="editar_lubrificador"),
+    path(
+        "lubrificadores/<int:pk>/registrar/",
+        views.registrar_atualizacao_lubrificador,
+        name="registrar_atualizacao_lubrificador",
+    ),
+    path(
+        "lubrificadores/<int:pk>/historico/",
+        views.historico_lubrificador,
+        name="historico_lubrificador",
+    ),
 
     path("api/itens-inspecao/", views.api_itens_inspecao, name="api_itens_inspecao"),
     
