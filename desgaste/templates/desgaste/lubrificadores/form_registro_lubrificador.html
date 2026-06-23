@@ -281,11 +281,23 @@
 
             <div class="grid-2">
                 <div class="field">
-                    {{ form.quantidade_total_bicos.label_tag }}
-                    {{ form.quantidade_total_bicos }}
-                    {% for error in form.quantidade_total_bicos.errors %}
-                    <div class="alert-danger">{{ error }}</div>
-                    {% endfor %}
+                    <label for="total-bicos-fixo">
+                        Quantidade total de bicos
+                    </label>
+
+                    <input
+                        type="text"
+                        id="total-bicos-fixo"
+                        class="form-control"
+                        value="8 bicos — quantidade fixa"
+                        readonly
+                    >
+
+                    <input
+                        type="hidden"
+                        id="id_quantidade_total_bicos"
+                        value="8"
+                    >
                 </div>
 
                 <div class="field">
@@ -382,8 +394,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const campoNivel = document.getElementById(
         "id_nivel_graxa_percentual"
     );
-    const barra = document.getElementById("nivel-graxa-barra");
-    const texto = document.getElementById("nivel-graxa-texto");
+    const barra = document.getElementById(
+        "nivel-graxa-barra"
+    );
+    const texto = document.getElementById(
+        "nivel-graxa-texto"
+    );
 
     function atualizarNivel() {
         let nivel = Number(campoNivel?.value || 0);
@@ -407,71 +423,146 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    if (campoNivel) {
-        campoNivel.addEventListener("input", atualizarNivel);
-        atualizarNivel();
+    function campo(id) {
+        return document.getElementById(id);
     }
 
-    const verificacoesNaoConformidades = [
-        {
-            id: "id_status_operacional",
-            normal: "OPERANTE",
-            titulo: "Status operacional",
-        },
-    ];
+    function textoSelecionado(elemento) {
+        if (
+            !elemento
+            || !elemento.value
+            || elemento.selectedIndex < 0
+        ) {
+            return "";
+        }
 
-    const verificacoesFalhas = [
-        {
-            id: "id_alimentacao_eletrica",
-            normal: "NORMAL",
-            titulo: "Alimentação elétrica",
-        },
-        {
-            id: "id_controladora",
-            normal: "LIGADA",
-            titulo: "Controladora",
-        },
-        {
-            id: "id_motor",
-            normal: "FUNCIONANDO",
-            titulo: "Motor",
-        },
-        {
-            id: "id_integridade_regua",
-            normal: "INTEGRA",
-            titulo: "Régua",
-        },
-        {
-            id: "id_sensor_inducao",
-            normal: "FUNCIONANDO",
-            titulo: "Sensor de indução",
-        },
-    ];
+        return elemento.options[
+            elemento.selectedIndex
+        ].text;
+    }
 
-    function obterItens(verificacoes) {
+    function obterNaoConformidades() {
         const itens = [];
+        const status = campo("id_status_operacional");
 
-        verificacoes.forEach(function (verificacao) {
-            const campo = document.getElementById(
-                verificacao.id
+        if (
+            status?.value
+            && status.value !== "OPERANTE"
+        ) {
+            itens.push(
+                "Status operacional: "
+                + textoSelecionado(status)
             );
-
-            if (!campo || !campo.value) {
-                return;
-            }
-
-            if (campo.value !== verificacao.normal) {
-                const opcao = campo.options[
-                    campo.selectedIndex
-                ];
-
-                itens.push(
-                    verificacao.titulo + ": " + opcao.text
-                );
-            }
-        });
+        }
 
         return itens;
+    }
+
+    function obterFalhasTecnicas() {
+        const falhas = [];
+
+        const alimentacao = campo(
+            "id_alimentacao_eletrica"
+        );
+        const controladora = campo("id_controladora");
+        const motor = campo("id_motor");
+        const regua = campo("id_integridade_regua");
+        const sensor = campo("id_sensor_inducao");
+
+        const valorAlimentacao = alimentacao?.value;
+        const valorControladora = controladora?.value;
+        const valorMotor = motor?.value;
+        const valorRegua = regua?.value;
+        const valorSensor = sensor?.value;
+
+        if (
+            valorAlimentacao === "AUSENTE"
+            || valorAlimentacao === "INSTAVEL"
+        ) {
+            falhas.push(
+                "Alimentação elétrica: "
+                + textoSelecionado(alimentacao)
+            );
+        }
+
+        if (valorControladora === "COM_FALHA") {
+            falhas.push(
+                "Controladora: "
+                + textoSelecionado(controladora)
+            );
+        } else if (
+            valorControladora === "DESLIGADA"
+            && valorAlimentacao === "NORMAL"
+        ) {
+            falhas.push(
+                "Controladora: "
+                + textoSelecionado(controladora)
+            );
+        }
+
+        if (
+            valorMotor === "TRAVADO"
+            || valorMotor === "FUNCIONAMENTO_IRREGULAR"
+        ) {
+            falhas.push(
+                "Motor: " + textoSelecionado(motor)
+            );
+        } else if (
+            valorMotor === "DESLIGADO"
+            && valorAlimentacao === "NORMAL"
+            && valorControladora === "LIGADA"
+        ) {
+            falhas.push(
+                "Motor: " + textoSelecionado(motor)
+            );
+        }
+
+        if (
+            valorRegua === "DANIFICADA"
+            || valorRegua === "ENTUPIDA"
+            || valorRegua === "COM_VAZAMENTO"
+        ) {
+            falhas.push(
+                "Régua: " + textoSelecionado(regua)
+            );
+        }
+
+        if (
+            valorSensor === "NAO_DETECTA"
+            || valorSensor === "INTERMITENTE"
+            || valorSensor === "DESALINHADO"
+        ) {
+            falhas.push(
+                "Sensor de indução: "
+                + textoSelecionado(sensor)
+            );
+        }
+
+        const total = campo(
+            "id_quantidade_total_bicos"
+        );
+        const funcionais = campo(
+            "id_quantidade_bicos_funcionais"
+        );
+
+        if (
+            total?.value !== ""
+            && funcionais?.value !== ""
+            && Number(funcionais.value)
+            < Number(total.value)
+        ) {
+            falhas.push(
+                "Bicos com falha: "
+                + (
+                    Number(total.value)
+                    - Number(funcionais.value)
+                )
+                + " de "
+                + Number(total.value)
+            );
+        }
+
+        return falhas;
     }
 
     function renderizarResumo(
@@ -504,66 +595,72 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function atualizarResumos() {
-        const naoConformidades = obterItens(
-            verificacoesNaoConformidades
-        );
-
-        const falhas = obterItens(verificacoesFalhas);
-
-        const campoTotal = document.getElementById(
-            "id_quantidade_total_bicos"
-        );
-        const campoFuncionais = document.getElementById(
-            "id_quantidade_bicos_funcionais"
-        );
-
-        const total = Number(campoTotal?.value);
-        const funcionais = Number(campoFuncionais?.value);
-
-        if (
-            campoTotal?.value !== ""
-            && campoFuncionais?.value !== ""
-            && funcionais < total
-        ) {
-            falhas.push(
-                "Bicos com falha: "
-                + (total - funcionais)
-                + " de "
-                + total
-            );
-        }
+        const naoConformidades = obterNaoConformidades();
+        const falhasTecnicas = obterFalhasTecnicas();
 
         renderizarResumo(
-            document.getElementById(
-                "resumo-nao-conformidades"
-            ),
-            document.getElementById(
-                "lista-nao-conformidades"
-            ),
-            document.getElementById(
-                "resumo-nao-conformidades-vazio"
-            ),
+            campo("resumo-nao-conformidades"),
+            campo("lista-nao-conformidades"),
+            campo("resumo-nao-conformidades-vazio"),
             naoConformidades
         );
 
         renderizarResumo(
-            document.getElementById("resumo-falhas"),
-            document.getElementById("lista-falhas"),
-            document.getElementById(
-                "resumo-falhas-vazio"
-            ),
-            falhas
+            campo("resumo-falhas"),
+            campo("lista-falhas"),
+            campo("resumo-falhas-vazio"),
+            falhasTecnicas
+        );
+
+        const resultado = campo(
+            "id_resultado_inspecao"
+        );
+
+        if (
+            resultado
+            && resultado.value === "COM_ANOMALIA"
+            && falhasTecnicas.length === 0
+        ) {
+            resultado.setCustomValidity(
+                "Para registrar uma inspeção com anomalia, "
+                + "identifique pelo menos uma falha técnica."
+            );
+        } else if (resultado) {
+            resultado.setCustomValidity("");
+        }
+    }
+
+    if (campoNivel) {
+        campoNivel.addEventListener(
+            "input",
+            atualizarNivel
+        );
+        atualizarNivel();
+    }
+
+    const resultadoInspecao = campo(
+        "id_resultado_inspecao"
+    );
+
+    if (resultadoInspecao) {
+        resultadoInspecao.addEventListener(
+            "change",
+            atualizarResumos
         );
     }
 
     [
-        ...verificacoesNaoConformidades,
-        ...verificacoesFalhas,
-    ].forEach(function (verificacao) {
-        const campo = document.getElementById(verificacao.id);
+        "id_status_operacional",
+        "id_alimentacao_eletrica",
+        "id_controladora",
+        "id_motor",
+        "id_integridade_regua",
+        "id_sensor_inducao",
+    ].forEach(function (id) {
+        const elemento = campo(id);
 
-        if (campo) {
-            campo.addEventListener(
+        if (elemento) {
+            elemento.addEventListener(
                 "change",
                 atualizarResumos
             );
@@ -574,10 +671,10 @@ document.addEventListener("DOMContentLoaded", function () {
         "id_quantidade_total_bicos",
         "id_quantidade_bicos_funcionais",
     ].forEach(function (id) {
-        const campo = document.getElementById(id);
+        const elemento = campo(id);
 
-        if (campo) {
-            campo.addEventListener(
+        if (elemento) {
+            elemento.addEventListener(
                 "input",
                 atualizarResumos
             );

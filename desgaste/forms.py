@@ -22,6 +22,7 @@ from .models import (
     RegistroLubrificador,
     OrdemCorretivaLubrificador,
     ResultadoInspecaoChoices,
+    ResultadoCorretivaChoices,
     StatusLubrificadorChoices,
     AlimentacaoEletricaChoices,
     ControladoraChoices,
@@ -690,6 +691,19 @@ class BaseAtuacaoLubrificadorForm(forms.ModelForm):
             "%Y-%m-%dT%H:%M",
         ]
 
+        self.fields["quantidade_bicos_funcionais"].required = True
+        self.fields["quantidade_bicos_funcionais"].label = (
+            "Quantidade de bicos funcionais (de 8)"
+        )
+        self.fields[
+            "quantidade_bicos_funcionais"
+        ].widget.attrs.update({
+            "min": "0",
+            "max": "8",
+            "step": "1",
+            "placeholder": "Informe um valor de 0 a 8",
+        })
+
         if not self.instance.pk and not self.is_bound:
             self.fields["data_hora"].initial = (
                 timezone.localtime().strftime("%Y-%m-%dT%H:%M")
@@ -698,31 +712,26 @@ class BaseAtuacaoLubrificadorForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
 
-        total = cleaned_data.get("quantidade_total_bicos")
-        funcionais = cleaned_data.get("quantidade_bicos_funcionais")
+        total_fixo = 8
+        funcionais = cleaned_data.get(
+            "quantidade_bicos_funcionais"
+        )
 
-        if total is None and funcionais is not None:
-            self.add_error(
-                "quantidade_total_bicos",
-                "Informe também a quantidade total de bicos.",
-            )
+        # Todos os lubrificadores possuem exatamente 8 bicos.
+        cleaned_data["quantidade_total_bicos"] = total_fixo
+        self.instance.quantidade_total_bicos = total_fixo
 
-        if total is not None and funcionais is None:
+        if funcionais is None:
             self.add_error(
                 "quantidade_bicos_funcionais",
-                "Informe também a quantidade de bicos funcionais.",
+                "Informe a quantidade de bicos funcionais.",
             )
-
-        if (
-            total is not None
-            and funcionais is not None
-            and funcionais > total
-        ):
+        elif funcionais > total_fixo:
             self.add_error(
                 "quantidade_bicos_funcionais",
                 (
-                    "A quantidade de bicos funcionais não pode ser "
-                    "maior que a quantidade total."
+                    "A quantidade de bicos funcionais não pode "
+                    "ser maior que 8."
                 ),
             )
 
@@ -741,7 +750,6 @@ class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
             "controladora",
             "motor",
             "integridade_regua",
-            "quantidade_total_bicos",
             "quantidade_bicos_funcionais",
             "sensor_inducao",
             "observacoes",
@@ -764,51 +772,117 @@ class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
         return []
 
     def identificar_falhas(self, cleaned_data):
-        verificacoes = [
-            (
-                "Alimentação elétrica",
-                "alimentacao_eletrica",
-                AlimentacaoEletricaChoices.NORMAL,
-                dict(AlimentacaoEletricaChoices.choices),
-            ),
-            (
-                "Controladora",
-                "controladora",
-                ControladoraChoices.LIGADA,
-                dict(ControladoraChoices.choices),
-            ),
-            (
-                "Motor",
-                "motor",
-                MotorLubrificadorChoices.FUNCIONANDO,
-                dict(MotorLubrificadorChoices.choices),
-            ),
-            (
-                "Régua",
-                "integridade_regua",
-                IntegridadeReguaChoices.INTEGRA,
-                dict(IntegridadeReguaChoices.choices),
-            ),
-            (
-                "Sensor de indução",
-                "sensor_inducao",
-                SensorInducaoChoices.FUNCIONANDO,
-                dict(SensorInducaoChoices.choices),
-            ),
-        ]
-
         falhas = []
 
-        for titulo, campo, valor_normal, opcoes in verificacoes:
-            valor = cleaned_data.get(campo)
+        alimentacao = cleaned_data.get(
+            "alimentacao_eletrica"
+        )
+        controladora = cleaned_data.get("controladora")
+        motor = cleaned_data.get("motor")
+        regua = cleaned_data.get("integridade_regua")
+        sensor = cleaned_data.get("sensor_inducao")
 
-            if valor and valor != valor_normal:
-                descricao = opcoes.get(valor, valor)
-                falhas.append(
-                    f"{titulo}: {descricao}"
+        opcoes_alimentacao = dict(
+            AlimentacaoEletricaChoices.choices
+        )
+        opcoes_controladora = dict(
+            ControladoraChoices.choices
+        )
+        opcoes_motor = dict(
+            MotorLubrificadorChoices.choices
+        )
+        opcoes_regua = dict(
+            IntegridadeReguaChoices.choices
+        )
+        opcoes_sensor = dict(
+            SensorInducaoChoices.choices
+        )
+
+        # Falha primária de alimentação.
+        if alimentacao in {
+            AlimentacaoEletricaChoices.AUSENTE,
+            AlimentacaoEletricaChoices.INSTAVEL,
+        }:
+            falhas.append(
+                "Alimentação elétrica: "
+                + opcoes_alimentacao.get(
+                    alimentacao,
+                    alimentacao,
                 )
+            )
 
-        total = cleaned_data.get("quantidade_total_bicos")
+        # Controladora desligada só é uma falha independente
+        # quando existe alimentação elétrica normal.
+        if controladora == ControladoraChoices.COM_FALHA:
+            falhas.append(
+                "Controladora: "
+                + opcoes_controladora.get(
+                    controladora,
+                    controladora,
+                )
+            )
+        elif (
+            controladora == ControladoraChoices.DESLIGADA
+            and alimentacao
+            == AlimentacaoEletricaChoices.NORMAL
+        ):
+            falhas.append(
+                "Controladora: "
+                + opcoes_controladora.get(
+                    controladora,
+                    controladora,
+                )
+            )
+
+        # Motor travado ou irregular sempre representa falha.
+        if motor in {
+            MotorLubrificadorChoices.TRAVADO,
+            MotorLubrificadorChoices.FUNCIONAMENTO_IRREGULAR,
+        }:
+            falhas.append(
+                "Motor: "
+                + opcoes_motor.get(motor, motor)
+            )
+
+        # Motor desligado só é tratado como falha independente
+        # quando alimentação e controladora estão normais.
+        elif (
+            motor == MotorLubrificadorChoices.DESLIGADO
+            and alimentacao
+            == AlimentacaoEletricaChoices.NORMAL
+            and controladora
+            == ControladoraChoices.LIGADA
+        ):
+            falhas.append(
+                "Motor: "
+                + opcoes_motor.get(motor, motor)
+            )
+
+        # "Não verificada" não é falha.
+        if regua in {
+            IntegridadeReguaChoices.DANIFICADA,
+            IntegridadeReguaChoices.ENTUPIDA,
+            IntegridadeReguaChoices.COM_VAZAMENTO,
+        }:
+            falhas.append(
+                "Régua: "
+                + opcoes_regua.get(regua, regua)
+            )
+
+        # "Não testado" não é falha.
+        if sensor in {
+            SensorInducaoChoices.NAO_DETECTA,
+            SensorInducaoChoices.INTERMITENTE,
+            SensorInducaoChoices.DESALINHADO,
+        }:
+            falhas.append(
+                "Sensor de indução: "
+                + opcoes_sensor.get(sensor, sensor)
+            )
+
+        total = cleaned_data.get(
+            "quantidade_total_bicos"
+        )
         funcionais = cleaned_data.get(
             "quantidade_bicos_funcionais"
         )
@@ -818,12 +892,10 @@ class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
             and funcionais is not None
             and funcionais < total
         ):
-            quantidade_falhas = total - funcionais
-
             falhas.append(
                 (
-                    f"Bicos com falha: {quantidade_falhas} "
-                    f"de {total}"
+                    f"Bicos com falha: "
+                    f"{total - funcionais} de {total}"
                 )
             )
 
@@ -849,14 +921,14 @@ class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
 
         if (
             resultado == ResultadoInspecaoChoices.COM_ANOMALIA
-            and not condicoes_anormais
+            and not falhas
         ):
             self.add_error(
                 "resultado_inspecao",
                 (
-                    "Para registrar uma anomalia, informe um "
-                    "status diferente de Operante ou selecione "
-                    "ao menos uma condição técnica anormal."
+                    "Para registrar uma inspeção como NOK, "
+                    "é obrigatório identificar pelo menos uma "
+                    "falha técnica do equipamento."
                 ),
             )
 
@@ -867,7 +939,7 @@ class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
             self.add_error(
                 "resultado_inspecao",
                 (
-                    "O resultado não pode ser Conforme porque foram "
+                    "O resultado não pode ser OK porque foram "
                     "identificadas as seguintes condições: "
                     + "; ".join(condicoes_anormais)
                 ),
@@ -888,7 +960,6 @@ class CorretivaLubrificadorForm(BaseAtuacaoLubrificadorForm):
     class Meta(BaseAtuacaoLubrificadorForm.Meta):
         fields = [
             "data_hora",
-            "resultado_corretiva",
             "status_operacional",
             "nivel_graxa_percentual",
             "alimentacao_eletrica",
@@ -896,7 +967,6 @@ class CorretivaLubrificadorForm(BaseAtuacaoLubrificadorForm):
             "controladora",
             "motor",
             "integridade_regua",
-            "quantidade_total_bicos",
             "quantidade_bicos_funcionais",
             "sensor_inducao",
             "servico_executado",
@@ -905,6 +975,11 @@ class CorretivaLubrificadorForm(BaseAtuacaoLubrificadorForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        if not self.instance.resultado_corretiva:
+            self.instance.resultado_corretiva = (
+                ResultadoCorretivaChoices.PARCIAL
+            )
 
         self.fields["servico_executado"].required = True
 
@@ -922,9 +997,22 @@ class CorretivaLubrificadorForm(BaseAtuacaoLubrificadorForm):
 
 
 class OrdemCorretivaLubrificadorForm(forms.ModelForm):
+    situacao = forms.ChoiceField(
+        label="Status da ordem",
+        choices=[
+            ("", "Selecione o status"),
+            ("EXECUTADA", "Executada"),
+            ("PARCIAL", "Executada parcialmente"),
+        ],
+        required=True,
+        widget=forms.Select(
+            attrs={"class": "form-control"}
+        ),
+    )
+
     class Meta:
         model = OrdemCorretivaLubrificador
-        fields = ["numero"]
+        fields = ["numero", "situacao"]
 
         widgets = {
             "numero": forms.TextInput(
@@ -934,6 +1022,10 @@ class OrdemCorretivaLubrificadorForm(forms.ModelForm):
                     "autocomplete": "off",
                 }
             ),
+        }
+
+        labels = {
+            "numero": "Número da ordem corretiva",
         }
 
     def clean_numero(self):

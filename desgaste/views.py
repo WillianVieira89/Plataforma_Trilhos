@@ -38,6 +38,7 @@ from .models import (
     ResultadoInspecaoChoices,
     ResultadoCorretivaChoices,
     SituacaoPendenciaChoices,
+    SituacaoOrdemCorretivaChoices,
 )
 
 MT_TRECHO_INICIAL = 1
@@ -558,6 +559,16 @@ def api_itens_inspecao(request):
 def listar_lubrificadores(request):
     filtro_via = request.GET.get("via", "").strip()
     filtro_status = request.GET.get("status", "").strip()
+    filtro_lubrificador = request.GET.get(
+        "lubrificador",
+        "",
+    ).strip()
+
+    opcoes_lubrificadores = list(
+        Lubrificador.objects
+        .order_by("nome")
+        .values_list("nome", flat=True)
+    )
 
     ultimo_registro = (
         RegistroLubrificador.objects
@@ -602,6 +613,11 @@ def listar_lubrificadores(request):
             status_operacional=filtro_status
         )
 
+    if filtro_lubrificador:
+        lubrificadores = lubrificadores.filter(
+            nome__icontains=filtro_lubrificador
+        )
+
     lubrificadores = list(lubrificadores)
 
     ids_registros = set()
@@ -643,6 +659,8 @@ def listar_lubrificadores(request):
             "lubrificadores": lubrificadores,
             "filtro_via": filtro_via,
             "filtro_status": filtro_status,
+            "filtro_lubrificador": filtro_lubrificador,
+            "opcoes_lubrificadores": opcoes_lubrificadores,
             "status_choices": StatusLubrificadorChoices.choices,
         },
     )
@@ -862,10 +880,77 @@ def registrar_corretiva_lubrificador(
                 if request.user.is_authenticated:
                     registro.registrado_por = request.user
 
-                if (
-                    registro.resultado_corretiva
-                    == ResultadoCorretivaChoices.RESOLVIDA
-                ):
+                situacoes_ordens = []
+
+                for ordem_form in ordens_formset.forms:
+                    dados = getattr(
+                        ordem_form,
+                        "cleaned_data",
+                        {},
+                    )
+
+                    if not dados:
+                        continue
+
+                    if dados.get("DELETE"):
+                        continue
+
+                    if not dados.get("numero"):
+                        continue
+
+                    situacoes_ordens.append(
+                        dados.get("situacao")
+                    )
+
+                todas_executadas = (
+                    bool(situacoes_ordens)
+                    and all(
+                        situacao
+                        == SituacaoOrdemCorretivaChoices.EXECUTADA
+                        for situacao in situacoes_ordens
+                    )
+                )
+
+                total_bicos = (
+                    registro.quantidade_total_bicos
+                )
+                bicos_funcionais = (
+                    registro.quantidade_bicos_funcionais
+                )
+
+                bicos_ok = (
+                    (
+                        total_bicos is None
+                        and bicos_funcionais is None
+                    )
+                    or (
+                        total_bicos is not None
+                        and bicos_funcionais is not None
+                        and total_bicos == bicos_funcionais
+                    )
+                )
+
+                todos_itens_ok = (
+                    registro.alimentacao_eletrica == "NORMAL"
+                    and registro.controladora == "LIGADA"
+                    and registro.motor == "FUNCIONANDO"
+                    and registro.integridade_regua == "INTEGRA"
+                    and registro.sensor_inducao == "FUNCIONANDO"
+                    and bicos_ok
+                )
+
+                corretiva_concluida = (
+                    todas_executadas
+                    and todos_itens_ok
+                )
+
+                if corretiva_concluida:
+                    registro.status_operacional = (
+                        StatusLubrificadorChoices.OPERANTE
+                    )
+                    registro.resultado_corretiva = (
+                        ResultadoCorretivaChoices.RESOLVIDA
+                    )
                     registro.situacao_pendencia = (
                         SituacaoPendenciaChoices.CONCLUIDA
                     )
@@ -873,6 +958,9 @@ def registrar_corretiva_lubrificador(
                         SituacaoPendenciaChoices.CONCLUIDA
                     )
                 else:
+                    registro.resultado_corretiva = (
+                        ResultadoCorretivaChoices.PARCIAL
+                    )
                     registro.situacao_pendencia = (
                         SituacaoPendenciaChoices.EM_TRATAMENTO
                     )
