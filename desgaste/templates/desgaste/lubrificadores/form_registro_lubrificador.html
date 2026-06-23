@@ -642,10 +642,63 @@ document.addEventListener("DOMContentLoaded", function () {
         "id_resultado_inspecao"
     );
 
+    function definirValor(id, valor) {
+        const elemento = campo(id);
+
+        if (elemento) {
+            elemento.value = valor;
+        }
+    }
+
+    function preencherInspecaoOk() {
+        if (
+            !resultadoInspecao
+            || resultadoInspecao.value !== "CONFORME"
+        ) {
+            atualizarResumos();
+            return;
+        }
+
+        definirValor(
+            "id_status_operacional",
+            "OPERANTE"
+        );
+        definirValor(
+            "id_alimentacao_eletrica",
+            "NORMAL"
+        );
+        definirValor(
+            "id_controladora",
+            "LIGADA"
+        );
+        definirValor(
+            "id_motor",
+            "FUNCIONANDO"
+        );
+        definirValor(
+            "id_integridade_regua",
+            "INTEGRA"
+        );
+        definirValor(
+            "id_quantidade_bicos_funcionais",
+            "8"
+        );
+        definirValor(
+            "id_sensor_inducao",
+            "FUNCIONANDO"
+        );
+
+        atualizarResumos();
+
+        if (campoNivel) {
+            campoNivel.focus();
+        }
+    }
+
     if (resultadoInspecao) {
         resultadoInspecao.addEventListener(
             "change",
-            atualizarResumos
+            preencherInspecaoOk
         );
     }
 
