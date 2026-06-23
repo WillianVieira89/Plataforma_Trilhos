@@ -736,16 +736,6 @@ class RegistroLubrificador(models.Model):
             self.tipo_atuacao
             == TipoAtuacaoLubrificadorChoices.CORRETIVA
         ):
-            if not self.inspecao_origem_id:
-                errors["inspecao_origem"] = (
-                    "Selecione a inspeção de origem."
-                )
-
-            if not self.ordem_corretiva_id:
-                errors["ordem_corretiva"] = (
-                    "Selecione a ordem corretiva executada."
-                )
-
             if self.resultado_inspecao:
                 errors["resultado_inspecao"] = (
                     "O resultado da inspeção não deve ser informado "
@@ -756,26 +746,6 @@ class RegistroLubrificador(models.Model):
                 errors["resultado_corretiva"] = (
                     "Informe o resultado da execução corretiva."
                 )
-
-            if self.ordem_corretiva_id:
-                ordem = self.ordem_corretiva
-
-                if (
-                    ordem.inspecao_origem.lubrificador_id
-                    != self.lubrificador_id
-                ):
-                    errors["ordem_corretiva"] = (
-                        "A ordem deve pertencer ao mesmo lubrificador."
-                    )
-
-                if (
-                    self.inspecao_origem_id
-                    and ordem.inspecao_origem_id
-                    != self.inspecao_origem_id
-                ):
-                    errors["ordem_corretiva"] = (
-                        "A ordem não pertence à inspeção informada."
-                    )
 
         if errors:
             raise ValidationError(errors)
@@ -868,11 +838,13 @@ class OrdemCorretivaLubrificador(models.Model):
         verbose_name="Situação da ordem",
     )
 
-    falhas_atendidas = models.ManyToManyField(
+    falha = models.ForeignKey(
         FalhaRegistroLubrificador,
+        on_delete=models.PROTECT,
+        null=True,
         blank=True,
         related_name="ordens_corretivas",
-        verbose_name="Falhas atendidas",
+        verbose_name="Falha atendida",
     )
 
     criada_em = models.DateTimeField(auto_now_add=True)
@@ -925,6 +897,19 @@ class OrdemCorretivaLubrificador(models.Model):
                     "inspecao_origem": (
                         "A ordem somente pode ser criada para uma "
                         "inspeção com anomalia."
+                    )
+                }
+            )
+
+        if (
+            self.falha_id
+            and self.falha.registro_inspecao_id
+            != self.inspecao_origem_id
+        ):
+            raise ValidationError(
+                {
+                    "falha": (
+                        "A falha deve pertencer à inspeção de origem."
                     )
                 }
             )

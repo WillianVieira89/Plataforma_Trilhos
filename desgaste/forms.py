@@ -30,6 +30,7 @@ from .models import (
     MotorLubrificadorChoices,
     IntegridadeReguaChoices,
     SensorInducaoChoices,
+    SituacaoOrdemCorretivaChoices,
 )
 
 
@@ -725,13 +726,6 @@ class BaseAtuacaoLubrificadorForm(forms.ModelForm):
 
 
 class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
-    falhas = forms.MultipleChoiceField(
-        label="Falhas identificadas",
-        choices=FalhaLubrificadorChoices.choices,
-        widget=forms.CheckboxSelectMultiple(),
-        required=False,
-    )
-
     class Meta(BaseAtuacaoLubrificadorForm.Meta):
         fields = [
             "data_hora",
@@ -874,19 +868,36 @@ class InspecaoLubrificadorForm(BaseAtuacaoLubrificadorForm):
         return cleaned_data
 
 
-class CorretivaLubrificadorForm(BaseAtuacaoLubrificadorForm):
-    numero_ordem = forms.CharField(
-        label="Número da ordem corretiva (OS)",
-        max_length=50,
-        widget=forms.TextInput(
-            attrs={
-                "class": "form-control",
-                "placeholder": "Ex.: 54109217",
-                "autocomplete": "off",
-            }
-        ),
-    )
+_MAPA_FALHAS = [
+    ("alimentacao_eletrica", AlimentacaoEletricaChoices.AUSENTE, FalhaLubrificadorChoices.ALIMENTACAO_AUSENTE),
+    ("alimentacao_eletrica", AlimentacaoEletricaChoices.INSTAVEL, FalhaLubrificadorChoices.ALIMENTACAO_INSTAVEL),
+    ("controladora", ControladoraChoices.DESLIGADA, FalhaLubrificadorChoices.CONTROLADORA_DESLIGADA),
+    ("controladora", ControladoraChoices.COM_FALHA, FalhaLubrificadorChoices.CONTROLADORA_COM_FALHA),
+    ("motor", MotorLubrificadorChoices.DESLIGADO, FalhaLubrificadorChoices.MOTOR_DESLIGADO),
+    ("motor", MotorLubrificadorChoices.TRAVADO, FalhaLubrificadorChoices.MOTOR_TRAVADO),
+    ("motor", MotorLubrificadorChoices.FUNCIONAMENTO_IRREGULAR, FalhaLubrificadorChoices.MOTOR_IRREGULAR),
+    ("integridade_regua", IntegridadeReguaChoices.DANIFICADA, FalhaLubrificadorChoices.REGUA_DANIFICADA),
+    ("integridade_regua", IntegridadeReguaChoices.ENTUPIDA, FalhaLubrificadorChoices.REGUA_ENTUPIDA),
+    ("integridade_regua", IntegridadeReguaChoices.COM_VAZAMENTO, FalhaLubrificadorChoices.REGUA_COM_VAZAMENTO),
+    ("sensor_inducao", SensorInducaoChoices.NAO_DETECTA, FalhaLubrificadorChoices.SENSOR_NAO_DETECTA),
+    ("sensor_inducao", SensorInducaoChoices.INTERMITENTE, FalhaLubrificadorChoices.SENSOR_INTERMITENTE),
+    ("sensor_inducao", SensorInducaoChoices.DESALINHADO, FalhaLubrificadorChoices.SENSOR_DESALINHADO),
+]
 
+
+def derivar_falhas(registro):
+    codigos = []
+    for campo, valor_falha, codigo in _MAPA_FALHAS:
+        if getattr(registro, campo) == valor_falha:
+            codigos.append(codigo)
+    total = registro.quantidade_total_bicos
+    funcionais = registro.quantidade_bicos_funcionais
+    if total is not None and funcionais is not None and funcionais < total:
+        codigos.append(FalhaLubrificadorChoices.BICOS_SEM_VAZAO)
+    return codigos
+
+
+class CorretivaLubrificadorForm(BaseAtuacaoLubrificadorForm):
     class Meta(BaseAtuacaoLubrificadorForm.Meta):
         fields = [
             "data_hora",
@@ -922,97 +933,53 @@ class CorretivaLubrificadorForm(BaseAtuacaoLubrificadorForm):
 
         return servico
 
-    def clean_numero_ordem(self):
-        numero = str(
-            self.cleaned_data.get("numero_ordem") or ""
-        ).strip().upper()
 
-        if not numero:
-            raise forms.ValidationError(
-                "Informe o número da ordem corretiva."
-            )
-
-        return numero
-
-
-class OrdemCorretivaLubrificadorForm(forms.ModelForm):
-    class Meta:
-        model = OrdemCorretivaLubrificador
-        fields = ["numero"]
-
-        widgets = {
-            "numero": forms.TextInput(
-                attrs={
-                    "class": "form-control ordem-corretiva",
-                    "placeholder": "Ex.: 54109217",
-                    "autocomplete": "off",
-                }
-            ),
-        }
+class NovaOSForm(forms.Form):
+    numero = forms.CharField(
+        required=True,
+        max_length=50,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Ex.: 54109217",
+                "autocomplete": "off",
+            }
+        ),
+    )
+    situacao = forms.ChoiceField(
+        choices=[
+            (SituacaoOrdemCorretivaChoices.EXECUTADA, "Executada"),
+            (SituacaoOrdemCorretivaChoices.PARCIAL, "Executada parcialmente"),
+        ],
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
 
     def clean_numero(self):
-        numero = str(
-            self.cleaned_data.get("numero") or ""
-        ).strip().upper()
-
-        if not numero:
-            raise forms.ValidationError(
-                "Informe o número da ordem corretiva."
-            )
-
-        return numero
+        return str(self.cleaned_data.get("numero") or "").strip().upper()
 
 
-class OrdemCorretivaLubrificadorBaseFormSet(BaseInlineFormSet):
+class AtualizarOSForm(forms.Form):
+    atualizar = forms.BooleanField(
+        label="Atualizar nesta visita",
+        required=False,
+    )
+    situacao = forms.ChoiceField(
+        choices=[
+            ("", "— selecione —"),
+            (SituacaoOrdemCorretivaChoices.EXECUTADA, "Executada"),
+            (SituacaoOrdemCorretivaChoices.PARCIAL, "Executada parcialmente"),
+        ],
+        required=False,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+
     def clean(self):
-        super().clean()
-
-        if any(self.errors):
-            return
-
-        numeros = []
-        quantidade_valida = 0
-
-        for form in self.forms:
-            if not hasattr(form, "cleaned_data"):
-                continue
-
-            dados = form.cleaned_data
-
-            if not dados or dados.get("DELETE"):
-                continue
-
-            numero = str(dados.get("numero") or "").strip().upper()
-
-            if not numero:
-                continue
-
-            quantidade_valida += 1
-
-            if numero in numeros:
-                raise forms.ValidationError(
-                    f"A ordem corretiva {numero} foi informada mais de uma vez."
-                )
-
-            numeros.append(numero)
-
-        if quantidade_valida == 0:
-            raise forms.ValidationError(
-                "Informe pelo menos uma ordem corretiva."
-            )
+        cleaned_data = super().clean()
+        if cleaned_data.get("atualizar") and not cleaned_data.get("situacao"):
+            raise forms.ValidationError("Selecione o resultado da OS.")
+        return cleaned_data
 
 
-OrdemCorretivaLubrificadorFormSet = inlineformset_factory(
-    RegistroLubrificador,
-    OrdemCorretivaLubrificador,
-    form=OrdemCorretivaLubrificadorForm,
-    formset=OrdemCorretivaLubrificadorBaseFormSet,
-    extra=1,
-    can_delete=True,
-)
-
-
-# Compatibilidade temporária com a view anterior.
 RegistroLubrificadorForm = InspecaoLubrificadorForm
 
 

@@ -93,14 +93,65 @@
     }
 
     .ordem-row {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 10px;
-        align-items: end;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
         padding: 14px;
         border: 1px solid #e5e7eb;
         border-radius: 10px;
         background: #f8fafc;
+    }
+
+    .ordem-campos-principais {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        align-items: end;
+    }
+
+    .ordem-falhas-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #374151;
+    }
+
+    .ordem-falhas ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .ordem-falhas li {
+        padding: 6px 10px;
+        border: 1px solid #bfdbfe;
+        border-radius: 6px;
+        background: #eff6ff;
+        font-size: 13px;
+    }
+
+    .ordem-falhas li label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        margin: 0;
+    }
+
+    .ordem-falhas input[type="checkbox"] {
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+
+    .ordem-acoes {
+        display: flex;
+        justify-content: flex-end;
     }
 
     .ordem-delete-control {
@@ -115,6 +166,22 @@
         margin-top: 14px;
     }
 
+    .falhas-lista-readonly {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+    }
+
+    .falha-tag {
+        padding: 5px 10px;
+        border: 1px solid #fca5a5;
+        border-radius: 6px;
+        background: #fef2f2;
+        color: #991b1b;
+        font-size: 13px;
+    }
+
     .section-description {
         margin: 0 0 18px;
         color: var(--muted);
@@ -122,7 +189,7 @@
     }
 
     @media (max-width: 600px) {
-        .ordem-row {
+        .ordem-campos-principais {
             grid-template-columns: 1fr;
         }
     }
@@ -183,10 +250,18 @@
                 {{ inspecao_origem.data_hora|date:"d/m/Y H:i" }}
             </strong>
 
+            {% if falhas_inspecao %}
+            <div class="falhas-lista-readonly">
+                {% for falha in falhas_inspecao %}
+                <span class="falha-tag">{{ falha.get_codigo_display }}</span>
+                {% endfor %}
+            </div>
+            {% else %}
             <p>
                 <strong>Anomalia:</strong>
                 {{ inspecao_origem.falha_encontrada }}
             </p>
+            {% endif %}
 
             <p>
                 <strong>Situação:</strong>
@@ -384,25 +459,47 @@
                         {{ hidden }}
                     {% endfor %}
 
-                    <div class="field">
-                        {{ ordem_form.numero.label_tag }}
-                        {{ ordem_form.numero }}
+                    <div class="ordem-campos-principais">
+                        <div class="field">
+                            {{ ordem_form.numero.label_tag }}
+                            {{ ordem_form.numero }}
+                            {% for error in ordem_form.numero.errors %}
+                            <div class="alert-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
 
-                        {% for error in ordem_form.numero.errors %}
+                        <div class="field">
+                            {{ ordem_form.situacao.label_tag }}
+                            {{ ordem_form.situacao }}
+                            {% for error in ordem_form.situacao.errors %}
+                            <div class="alert-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% if falhas_inspecao %}
+                    <div class="ordem-falhas">
+                        <span class="ordem-falhas-label">
+                            Falhas atendidas por esta OS:
+                        </span>
+                        {% for error in ordem_form.falhas_atendidas.errors %}
                         <div class="alert-danger">{{ error }}</div>
                         {% endfor %}
+                        {{ ordem_form.falhas_atendidas }}
                     </div>
+                    {% endif %}
 
-                    <div class="ordem-delete-control">
-                        {{ ordem_form.DELETE }}
+                    <div class="ordem-acoes">
+                        <div class="ordem-delete-control">
+                            {{ ordem_form.DELETE }}
+                        </div>
+                        <button
+                            type="button"
+                            class="btn btn-danger remover-ordem"
+                        >
+                            Remover
+                        </button>
                     </div>
-
-                    <button
-                        type="button"
-                        class="btn btn-danger remover-ordem"
-                    >
-                        Remover
-                    </button>
                 </div>
                 {% endfor %}
             </div>
@@ -413,7 +510,7 @@
                     id="adicionar-ordem"
                     class="btn btn-secondary"
                 >
-                    + Adicionar outra ordem
+                    + Adicionar outra OS
                 </button>
             </div>
 
@@ -423,21 +520,38 @@
                         {{ hidden }}
                     {% endfor %}
 
-                    <div class="field">
-                        {{ ordens_formset.empty_form.numero.label_tag }}
-                        {{ ordens_formset.empty_form.numero }}
+                    <div class="ordem-campos-principais">
+                        <div class="field">
+                            {{ ordens_formset.empty_form.numero.label_tag }}
+                            {{ ordens_formset.empty_form.numero }}
+                        </div>
+
+                        <div class="field">
+                            {{ ordens_formset.empty_form.situacao.label_tag }}
+                            {{ ordens_formset.empty_form.situacao }}
+                        </div>
                     </div>
 
-                    <div class="ordem-delete-control">
-                        {{ ordens_formset.empty_form.DELETE }}
+                    {% if falhas_inspecao %}
+                    <div class="ordem-falhas">
+                        <span class="ordem-falhas-label">
+                            Falhas atendidas por esta OS:
+                        </span>
+                        {{ ordens_formset.empty_form.falhas_atendidas }}
                     </div>
+                    {% endif %}
 
-                    <button
-                        type="button"
-                        class="btn btn-danger remover-ordem"
-                    >
-                        Remover
-                    </button>
+                    <div class="ordem-acoes">
+                        <div class="ordem-delete-control">
+                            {{ ordens_formset.empty_form.DELETE }}
+                        </div>
+                        <button
+                            type="button"
+                            class="btn btn-danger remover-ordem"
+                        >
+                            Remover
+                        </button>
+                    </div>
                 </div>
             </template>
         </div>

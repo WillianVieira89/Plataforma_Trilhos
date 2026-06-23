@@ -792,6 +792,8 @@ def registrar_corretiva_lubrificador(
             pk=lubrificador.pk,
         )
 
+    falhas_inspecao = inspecao_origem.falhas.all()
+
     ultimo_registro = (
         lubrificador.registros
         .order_by("-data_hora", "-criado_em")
@@ -846,8 +848,9 @@ def registrar_corretiva_lubrificador(
 
         ordens_formset = OrdemCorretivaLubrificadorFormSet(
             request.POST,
-            instance=instancia,
+            instance=inspecao_origem,
             prefix="ordens",
+            inspecao_falhas=falhas_inspecao,
         )
 
         if form.is_valid() and ordens_formset.is_valid():
@@ -885,7 +888,6 @@ def registrar_corretiva_lubrificador(
 
                 registro.save()
 
-                ordens_formset.instance = registro
                 ordens_formset.save()
 
                 inspecao_origem.save(
@@ -927,8 +929,9 @@ def registrar_corretiva_lubrificador(
         )
 
         ordens_formset = OrdemCorretivaLubrificadorFormSet(
-            instance=instancia,
+            instance=inspecao_origem,
             prefix="ordens",
+            inspecao_falhas=falhas_inspecao,
         )
 
     return render(
@@ -940,6 +943,7 @@ def registrar_corretiva_lubrificador(
         {
             "form": form,
             "ordens_formset": ordens_formset,
+            "falhas_inspecao": falhas_inspecao,
             "lubrificador": lubrificador,
             "inspecao_origem": inspecao_origem,
             "titulo": (
