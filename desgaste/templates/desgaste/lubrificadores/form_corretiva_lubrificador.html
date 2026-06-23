@@ -36,14 +36,27 @@
 
     .lub-info-label {
         display: block;
+        margin-bottom: 4px;
         color: var(--muted);
         font-size: 13px;
-        margin-bottom: 4px;
     }
 
     .lub-info-value {
-        font-weight: 700;
         font-size: 16px;
+        font-weight: 700;
+    }
+
+    .inspecao-origem {
+        padding: 16px;
+        border-left: 5px solid #d97706;
+        border-radius: 10px;
+        background: #fffbeb;
+    }
+
+    .inspecao-origem p {
+        margin: 7px 0 0;
+        color: #78350f;
+        line-height: 1.5;
     }
 
     .tanque-preview {
@@ -73,51 +86,55 @@
         transition: width 0.25s ease, background 0.25s ease;
     }
 
+    .ordens-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .ordem-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: end;
+        padding: 14px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #f8fafc;
+    }
+
+    .ordem-delete-control {
+        display: none;
+    }
+
+    .ordem-removida {
+        display: none;
+    }
+
+    .ordens-acoes {
+        margin-top: 14px;
+    }
+
     .section-description {
         margin: 0 0 18px;
         color: var(--muted);
         font-size: 14px;
     }
 
-    .resumo-nao-conformidades {
-        margin-bottom: 18px;
-        padding: 14px;
-        border: 1px solid #cbd5e1;
-        border-left: 5px solid #64748b;
-        border-radius: 10px;
-        background: #f8fafc;
+    @media (max-width: 600px) {
+        .ordem-row {
+            grid-template-columns: 1fr;
+        }
     }
-
-    .resumo-nao-conformidades.tem-falha {
-        border-color: #fdba74;
-        border-left-color: #ea580c;
-        background: #fff7ed;
-        color: #7c2d12;
-    }
-
-    .resumo-nao-conformidades p {
-        margin: 8px 0 0;
-        color: var(--muted);
-        font-size: 14px;
-    }
-
-    .resumo-nao-conformidades ul {
-        margin: 10px 0 0;
-        padding-left: 22px;
-    }
-
-    .resumo-nao-conformidades li {
-        margin-bottom: 5px;
-        font-size: 14px;
-    }
-
 </style>
 
 <div class="page-header">
     <div>
         <h1 class="page-title">{{ titulo }}</h1>
+
         <p class="page-subtitle">
-            Registre a inspeção técnica e a condição atual do equipamento.
+            Registre o serviço executado, as ordens corretivas e a
+            condição do equipamento após a atuação.
         </p>
     </div>
 </div>
@@ -156,6 +173,36 @@
     </div>
 </div>
 
+<div class="card">
+    <div class="card-header">Inspeção que originou a corretiva</div>
+
+    <div class="card-body">
+        <div class="inspecao-origem">
+            <strong>
+                Inspeção de
+                {{ inspecao_origem.data_hora|date:"d/m/Y H:i" }}
+            </strong>
+
+            <p>
+                <strong>Anomalia:</strong>
+                {{ inspecao_origem.falha_encontrada }}
+            </p>
+
+            <p>
+                <strong>Situação:</strong>
+                {{ inspecao_origem.get_situacao_pendencia_display }}
+            </p>
+
+            {% if inspecao_origem.registrado_por %}
+            <p>
+                <strong>Registrada por:</strong>
+                {% firstof inspecao_origem.registrado_por.get_full_name inspecao_origem.registrado_por.username %}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
 <form method="post">
     {% csrf_token %}
 
@@ -166,13 +213,9 @@
     {% endif %}
 
     <div class="card">
-        <div class="card-header">Condição geral</div>
+        <div class="card-header">Resultado da corretiva</div>
 
         <div class="card-body">
-            <p class="section-description">
-                Informe o estado geral do equipamento e o nível atual do tanque.
-            </p>
-
             <div class="grid-2">
                 <div class="field">
                     {{ form.data_hora.label_tag }}
@@ -183,9 +226,9 @@
                 </div>
 
                 <div class="field">
-                    {{ form.resultado_inspecao.label_tag }}
-                    {{ form.resultado_inspecao }}
-                    {% for error in form.resultado_inspecao.errors %}
+                    {{ form.resultado_corretiva.label_tag }}
+                    {{ form.resultado_corretiva }}
+                    {% for error in form.resultado_corretiva.errors %}
                     <div class="alert-danger">{{ error }}</div>
                     {% endfor %}
                 </div>
@@ -258,7 +301,9 @@
     </div>
 
     <div class="card">
-        <div class="card-header">Sistema mecânico e distribuição de graxa</div>
+        <div class="card-header">
+            Sistema mecânico e distribuição de graxa
+        </div>
 
         <div class="card-body">
             <div class="grid-2">
@@ -316,20 +361,98 @@
     </div>
 
     <div class="card">
-        <div class="card-header">Não conformidades e observações</div>
+        <div class="card-header">Ordens corretivas</div>
 
         <div class="card-body">
-            <div
-                id="resumo-nao-conformidades"
-                class="resumo-nao-conformidades"
-            >
-                <strong>Não conformidades identificadas</strong>
+            <p class="section-description">
+                Informe pelo menos uma ordem. Utilize o botão para
+                adicionar outras ordens relacionadas à mesma corretiva.
+            </p>
 
-                <p id="resumo-nao-conformidades-vazio">
-                    Nenhuma condição anormal selecionada.
-                </p>
+            {{ ordens_formset.management_form }}
 
-                <ul id="lista-nao-conformidades"></ul>
+            {% if ordens_formset.non_form_errors %}
+            <div class="alert-danger">
+                {{ ordens_formset.non_form_errors }}
+            </div>
+            {% endif %}
+
+            <div id="ordens-container" class="ordens-container">
+                {% for ordem_form in ordens_formset %}
+                <div class="ordem-row">
+                    {% for hidden in ordem_form.hidden_fields %}
+                        {{ hidden }}
+                    {% endfor %}
+
+                    <div class="field">
+                        {{ ordem_form.numero.label_tag }}
+                        {{ ordem_form.numero }}
+
+                        {% for error in ordem_form.numero.errors %}
+                        <div class="alert-danger">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="ordem-delete-control">
+                        {{ ordem_form.DELETE }}
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn btn-danger remover-ordem"
+                    >
+                        Remover
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="ordens-acoes">
+                <button
+                    type="button"
+                    id="adicionar-ordem"
+                    class="btn btn-secondary"
+                >
+                    + Adicionar outra ordem
+                </button>
+            </div>
+
+            <template id="ordem-form-vazio">
+                <div class="ordem-row">
+                    {% for hidden in ordens_formset.empty_form.hidden_fields %}
+                        {{ hidden }}
+                    {% endfor %}
+
+                    <div class="field">
+                        {{ ordens_formset.empty_form.numero.label_tag }}
+                        {{ ordens_formset.empty_form.numero }}
+                    </div>
+
+                    <div class="ordem-delete-control">
+                        {{ ordens_formset.empty_form.DELETE }}
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn btn-danger remover-ordem"
+                    >
+                        Remover
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Serviço executado e observações</div>
+
+        <div class="card-body">
+            <div class="field">
+                {{ form.servico_executado.label_tag }}
+                {{ form.servico_executado }}
+                {% for error in form.servico_executado.errors %}
+                <div class="alert-danger">{{ error }}</div>
+                {% endfor %}
             </div>
 
             <div class="field">
@@ -344,7 +467,7 @@
 
     <div class="page-actions">
         <button type="submit" class="btn btn-success">
-            Salvar inspeção
+            Salvar corretiva
         </button>
 
         <a
@@ -364,28 +487,27 @@ document.addEventListener("DOMContentLoaded", function () {
         "id_nivel_graxa_percentual"
     );
     const barra = document.getElementById("nivel-graxa-barra");
-    const texto = document.getElementById("nivel-graxa-texto");
+    const textoNivel = document.getElementById("nivel-graxa-texto");
 
     function atualizarNivel() {
-        let nivel = Number(campoNivel.value || 0);
+        let nivel = Number(campoNivel?.value || 0);
 
-        if (nivel < 0) {
-            nivel = 0;
+        nivel = Math.max(0, Math.min(100, nivel));
+
+        if (barra) {
+            barra.style.width = nivel + "%";
+
+            if (nivel <= 20) {
+                barra.style.background = "#dc2626";
+            } else if (nivel <= 50) {
+                barra.style.background = "#d97706";
+            } else {
+                barra.style.background = "#16a34a";
+            }
         }
 
-        if (nivel > 100) {
-            nivel = 100;
-        }
-
-        barra.style.width = nivel + "%";
-        texto.textContent = nivel + "%";
-
-        if (nivel <= 20) {
-            barra.style.background = "#dc2626";
-        } else if (nivel <= 50) {
-            barra.style.background = "#d97706";
-        } else {
-            barra.style.background = "#16a34a";
+        if (textoNivel) {
+            textoNivel.textContent = nivel + "%";
         }
     }
 
@@ -394,140 +516,48 @@ document.addEventListener("DOMContentLoaded", function () {
         atualizarNivel();
     }
 
-    const verificacoes = [
-        {
-            id: "id_status_operacional",
-            normal: "OPERANTE",
-            titulo: "Status operacional",
-        },
-        {
-            id: "id_alimentacao_eletrica",
-            normal: "NORMAL",
-            titulo: "Alimentação elétrica",
-        },
-        {
-            id: "id_controladora",
-            normal: "LIGADA",
-            titulo: "Controladora",
-        },
-        {
-            id: "id_motor",
-            normal: "FUNCIONANDO",
-            titulo: "Motor",
-        },
-        {
-            id: "id_integridade_regua",
-            normal: "INTEGRA",
-            titulo: "Régua",
-        },
-        {
-            id: "id_sensor_inducao",
-            normal: "FUNCIONANDO",
-            titulo: "Sensor de indução",
-        },
-    ];
-
-    const caixaResumo = document.getElementById(
-        "resumo-nao-conformidades"
-    );
-    const listaResumo = document.getElementById(
-        "lista-nao-conformidades"
-    );
-    const textoVazio = document.getElementById(
-        "resumo-nao-conformidades-vazio"
+    const container = document.getElementById("ordens-container");
+    const botaoAdicionar = document.getElementById("adicionar-ordem");
+    const template = document.getElementById("ordem-form-vazio");
+    const totalForms = document.getElementById(
+        "id_ordens-TOTAL_FORMS"
     );
 
-    function atualizarNaoConformidades() {
-        const itens = [];
+    function configurarRemocao(linha) {
+        const botao = linha.querySelector(".remover-ordem");
 
-        verificacoes.forEach(function (verificacao) {
-            const campo = document.getElementById(
-                verificacao.id
-            );
-
-            if (!campo || !campo.value) {
-                return;
-            }
-
-            if (campo.value !== verificacao.normal) {
-                const opcao = campo.options[
-                    campo.selectedIndex
-                ];
-
-                itens.push(
-                    verificacao.titulo + ": " + opcao.text
-                );
-            }
-        });
-
-        const campoTotal = document.getElementById(
-            "id_quantidade_total_bicos"
-        );
-        const campoFuncionais = document.getElementById(
-            "id_quantidade_bicos_funcionais"
-        );
-
-        const total = Number(campoTotal?.value);
-        const funcionais = Number(campoFuncionais?.value);
-
-        if (
-            campoTotal?.value !== ""
-            && campoFuncionais?.value !== ""
-            && funcionais < total
-        ) {
-            itens.push(
-                "Bicos com falha: "
-                + (total - funcionais)
-                + " de "
-                + total
-            );
+        if (!botao) {
+            return;
         }
 
-        listaResumo.innerHTML = "";
+        botao.addEventListener("click", function () {
+            const campoDelete = linha.querySelector(
+                'input[name$="-DELETE"]'
+            );
 
-        itens.forEach(function (item) {
-            const li = document.createElement("li");
-            li.textContent = item;
-            listaResumo.appendChild(li);
+            if (campoDelete) {
+                campoDelete.checked = true;
+                linha.classList.add("ordem-removida");
+            } else {
+                linha.remove();
+            }
         });
-
-        if (itens.length > 0) {
-            caixaResumo.classList.add("tem-falha");
-            textoVazio.style.display = "none";
-            listaResumo.style.display = "block";
-        } else {
-            caixaResumo.classList.remove("tem-falha");
-            textoVazio.style.display = "block";
-            listaResumo.style.display = "none";
-        }
     }
 
-    verificacoes.forEach(function (verificacao) {
-        const campo = document.getElementById(verificacao.id);
+    container.querySelectorAll(".ordem-row").forEach(configurarRemocao);
 
-        if (campo) {
-            campo.addEventListener(
-                "change",
-                atualizarNaoConformidades
-            );
-        }
+    botaoAdicionar.addEventListener("click", function () {
+        const indice = Number(totalForms.value);
+        const html = template.innerHTML.replace(
+            /__prefix__/g,
+            indice
+        );
+
+        container.insertAdjacentHTML("beforeend", html);
+        totalForms.value = indice + 1;
+
+        configurarRemocao(container.lastElementChild);
     });
-
-    [
-        "id_quantidade_total_bicos",
-        "id_quantidade_bicos_funcionais",
-    ].forEach(function (id) {
-        const campo = document.getElementById(id);
-
-        if (campo) {
-            campo.addEventListener(
-                "input",
-                atualizarNaoConformidades
-            );
-        }
-    });
-
-    atualizarNaoConformidades();
 });
 </script>
 {% endblock %}

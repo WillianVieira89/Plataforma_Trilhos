@@ -14,7 +14,9 @@ from .forms import (
     OcorrenciaInspecaoFormSet,
     OcorrenciaInspecaoTrechoForm,
     TrocaTrilhoForm,
-    RegistroLubrificadorForm,
+    InspecaoLubrificadorForm,
+    CorretivaLubrificadorForm,
+    OrdemCorretivaLubrificadorFormSet,
     LubrificadorCadastroForm,
 )
 from .models import (
@@ -32,6 +34,10 @@ from .models import (
     Lubrificador,
     StatusLubrificadorChoices,
     RegistroLubrificador,
+    TipoAtuacaoLubrificadorChoices,
+    ResultadoInspecaoChoices,
+    ResultadoCorretivaChoices,
+    SituacaoPendenciaChoices,
 )
 
 MT_TRECHO_INICIAL = 1
@@ -559,12 +565,29 @@ def listar_lubrificadores(request):
         .order_by("-data_hora", "-criado_em")
     )
 
+    pendencia_aberta = (
+        RegistroLubrificador.objects
+        .filter(
+            lubrificador_id=OuterRef("pk"),
+            tipo_atuacao=TipoAtuacaoLubrificadorChoices.INSPECAO,
+            resultado_inspecao=ResultadoInspecaoChoices.COM_ANOMALIA,
+            situacao_pendencia__in=[
+                SituacaoPendenciaChoices.AGUARDANDO_CORRETIVA,
+                SituacaoPendenciaChoices.EM_TRATAMENTO,
+            ],
+        )
+        .order_by("-data_hora", "-criado_em")
+    )
+
     lubrificadores = (
         Lubrificador.objects
         .annotate(
             ultimo_registro_id=Subquery(
                 ultimo_registro.values("pk")[:1]
-            )
+            ),
+            pendencia_aberta_id=Subquery(
+                pendencia_aberta.values("pk")[:1]
+            ),
         )
         .order_by("nome")
     )
@@ -581,22 +604,36 @@ def listar_lubrificadores(request):
 
     lubrificadores = list(lubrificadores)
 
-    ids_ultimos_registros = [
-        lubrificador.ultimo_registro_id
-        for lubrificador in lubrificadores
-        if lubrificador.ultimo_registro_id
-    ]
+    ids_registros = set()
+
+    for lubrificador in lubrificadores:
+        if lubrificador.ultimo_registro_id:
+            ids_registros.add(
+                lubrificador.ultimo_registro_id
+            )
+
+        if lubrificador.pendencia_aberta_id:
+            ids_registros.add(
+                lubrificador.pendencia_aberta_id
+            )
 
     registros_por_id = (
         RegistroLubrificador.objects
-        .filter(pk__in=ids_ultimos_registros)
-        .select_related("registrado_por")
+        .filter(pk__in=ids_registros)
+        .select_related(
+            "registrado_por",
+            "inspecao_origem",
+        )
         .in_bulk()
     )
 
     for lubrificador in lubrificadores:
         lubrificador.ultimo_registro = registros_por_id.get(
             lubrificador.ultimo_registro_id
+        )
+
+        lubrificador.pendencia_aberta = registros_por_id.get(
+            lubrificador.pendencia_aberta_id
         )
 
     return render(
@@ -611,19 +648,43 @@ def listar_lubrificadores(request):
     )
 
 
-def registrar_atualizacao_lubrificador(request, pk):
+def registrar_inspecao_lubrificador(request, pk):
     lubrificador = get_object_or_404(
         Lubrificador,
         pk=pk,
     )
 
+    instancia = RegistroLubrificador(
+        lubrificador=lubrificador,
+        tipo_atuacao=TipoAtuacaoLubrificadorChoices.INSPECAO,
+        situacao_pendencia=SituacaoPendenciaChoices.SEM_PENDENCIA,
+    )
+
     if request.method == "POST":
-        form = RegistroLubrificadorForm(request.POST)
+        form = InspecaoLubrificadorForm(
+            request.POST,
+            instance=instancia,
+        )
 
         if form.is_valid():
             with transaction.atomic():
                 registro = form.save(commit=False)
-                registro.lubrificador = lubrificador
+
+                registro.tipo_atuacao = (
+                    TipoAtuacaoLubrificadorChoices.INSPECAO
+                )
+
+                if (
+                    registro.resultado_inspecao
+                    == ResultadoInspecaoChoices.COM_ANOMALIA
+                ):
+                    registro.situacao_pendencia = (
+                        SituacaoPendenciaChoices.AGUARDANDO_CORRETIVA
+                    )
+                else:
+                    registro.situacao_pendencia = (
+                        SituacaoPendenciaChoices.SEM_PENDENCIA
+                    )
 
                 if request.user.is_authenticated:
                     registro.registrado_por = request.user
@@ -637,22 +698,35 @@ def registrar_atualizacao_lubrificador(request, pk):
                     update_fields=["status_operacional"]
                 )
 
-            messages.success(
-                request,
-                (
-                    f"Atualização do {lubrificador.nome} "
-                    "registrada com sucesso."
-                ),
-            )
+            if (
+                registro.resultado_inspecao
+                == ResultadoInspecaoChoices.COM_ANOMALIA
+            ):
+                messages.warning(
+                    request,
+                    (
+                        f"Inspeção do {lubrificador.nome} registrada "
+                        "com pendência aguardando corretiva."
+                    ),
+                )
+            else:
+                messages.success(
+                    request,
+                    (
+                        f"Inspeção do {lubrificador.nome} registrada "
+                        "sem pendências."
+                    ),
+                )
 
             return redirect("listar_lubrificadores")
     else:
-        form = RegistroLubrificadorForm(
+        form = InspecaoLubrificadorForm(
+            instance=instancia,
             initial={
                 "status_operacional": (
                     lubrificador.status_operacional
                 ),
-            }
+            },
         )
 
     return render(
@@ -664,12 +738,204 @@ def registrar_atualizacao_lubrificador(request, pk):
         {
             "form": form,
             "lubrificador": lubrificador,
+            "titulo": f"Nova inspeção — {lubrificador.nome}",
+            "tipo_formulario": "inspecao",
+        },
+    )
+
+
+def registrar_corretiva_lubrificador(
+    request,
+    pk,
+    inspecao_pk,
+):
+    lubrificador = get_object_or_404(
+        Lubrificador,
+        pk=pk,
+    )
+
+    inspecao_origem = get_object_or_404(
+        RegistroLubrificador,
+        pk=inspecao_pk,
+        lubrificador=lubrificador,
+        tipo_atuacao=TipoAtuacaoLubrificadorChoices.INSPECAO,
+        resultado_inspecao=ResultadoInspecaoChoices.COM_ANOMALIA,
+    )
+
+    if not inspecao_origem.pendencia_aberta:
+        messages.info(
+            request,
+            (
+                "Esta inspeção não possui uma pendência "
+                "corretiva aberta."
+            ),
+        )
+        return redirect(
+            "historico_lubrificador",
+            pk=lubrificador.pk,
+        )
+
+    ultimo_registro = (
+        lubrificador.registros
+        .order_by("-data_hora", "-criado_em")
+        .first()
+    )
+
+    instancia = RegistroLubrificador(
+        lubrificador=lubrificador,
+        tipo_atuacao=TipoAtuacaoLubrificadorChoices.CORRETIVA,
+        inspecao_origem=inspecao_origem,
+        situacao_pendencia=SituacaoPendenciaChoices.EM_TRATAMENTO,
+    )
+
+    valores_iniciais = {
+        "status_operacional": (
+            lubrificador.status_operacional
+        ),
+    }
+
+    if ultimo_registro:
+        valores_iniciais.update({
+            "nivel_graxa_percentual": (
+                ultimo_registro.nivel_graxa_percentual
+            ),
+            "alimentacao_eletrica": (
+                ultimo_registro.alimentacao_eletrica
+            ),
+            "tensao_alimentacao": (
+                ultimo_registro.tensao_alimentacao
+            ),
+            "controladora": ultimo_registro.controladora,
+            "motor": ultimo_registro.motor,
+            "integridade_regua": (
+                ultimo_registro.integridade_regua
+            ),
+            "quantidade_total_bicos": (
+                ultimo_registro.quantidade_total_bicos
+            ),
+            "quantidade_bicos_funcionais": (
+                ultimo_registro.quantidade_bicos_funcionais
+            ),
+            "sensor_inducao": (
+                ultimo_registro.sensor_inducao
+            ),
+        })
+
+    if request.method == "POST":
+        form = CorretivaLubrificadorForm(
+            request.POST,
+            instance=instancia,
+        )
+
+        ordens_formset = OrdemCorretivaLubrificadorFormSet(
+            request.POST,
+            instance=instancia,
+            prefix="ordens",
+        )
+
+        if form.is_valid() and ordens_formset.is_valid():
+            with transaction.atomic():
+                registro = form.save(commit=False)
+
+                registro.tipo_atuacao = (
+                    TipoAtuacaoLubrificadorChoices.CORRETIVA
+                )
+                registro.inspecao_origem = inspecao_origem
+                registro.falha_encontrada = (
+                    inspecao_origem.falha_encontrada
+                )
+
+                if request.user.is_authenticated:
+                    registro.registrado_por = request.user
+
+                if (
+                    registro.resultado_corretiva
+                    == ResultadoCorretivaChoices.RESOLVIDA
+                ):
+                    registro.situacao_pendencia = (
+                        SituacaoPendenciaChoices.CONCLUIDA
+                    )
+                    inspecao_origem.situacao_pendencia = (
+                        SituacaoPendenciaChoices.CONCLUIDA
+                    )
+                else:
+                    registro.situacao_pendencia = (
+                        SituacaoPendenciaChoices.EM_TRATAMENTO
+                    )
+                    inspecao_origem.situacao_pendencia = (
+                        SituacaoPendenciaChoices.EM_TRATAMENTO
+                    )
+
+                registro.save()
+
+                ordens_formset.instance = registro
+                ordens_formset.save()
+
+                inspecao_origem.save(
+                    update_fields=["situacao_pendencia"]
+                )
+
+                lubrificador.status_operacional = (
+                    registro.status_operacional
+                )
+                lubrificador.save(
+                    update_fields=["status_operacional"]
+                )
+
+            if (
+                registro.resultado_corretiva
+                == ResultadoCorretivaChoices.RESOLVIDA
+            ):
+                messages.success(
+                    request,
+                    (
+                        f"Corretiva do {lubrificador.nome} "
+                        "registrada e pendência concluída."
+                    ),
+                )
+            else:
+                messages.warning(
+                    request,
+                    (
+                        f"Corretiva do {lubrificador.nome} registrada. "
+                        "A pendência permanece em tratamento."
+                    ),
+                )
+
+            return redirect("listar_lubrificadores")
+    else:
+        form = CorretivaLubrificadorForm(
+            instance=instancia,
+            initial=valores_iniciais,
+        )
+
+        ordens_formset = OrdemCorretivaLubrificadorFormSet(
+            instance=instancia,
+            prefix="ordens",
+        )
+
+    return render(
+        request,
+        (
+            "desgaste/lubrificadores/"
+            "form_corretiva_lubrificador.html"
+        ),
+        {
+            "form": form,
+            "ordens_formset": ordens_formset,
+            "lubrificador": lubrificador,
+            "inspecao_origem": inspecao_origem,
             "titulo": (
-                f"Registrar atualização — "
+                f"Registrar corretiva — "
                 f"{lubrificador.nome}"
             ),
         },
     )
+
+
+def registrar_atualizacao_lubrificador(request, pk):
+    """Compatibilidade com links antigos do módulo."""
+    return registrar_inspecao_lubrificador(request, pk)
 
 
 def historico_lubrificador(request, pk):
@@ -680,7 +946,11 @@ def historico_lubrificador(request, pk):
 
     registros = (
         lubrificador.registros
-        .select_related("registrado_por")
+        .select_related(
+            "registrado_por",
+            "inspecao_origem",
+        )
+        .prefetch_related("ordens_corretivas")
         .order_by("-data_hora", "-criado_em")
     )
 
